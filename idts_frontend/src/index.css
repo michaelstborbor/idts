@@ -1,0 +1,47 @@
+/* Base */
+* {
+  box-sizing: border-box;
+}
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+body {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Two-column form/stat grids collapse to one column on narrow screens.
+   Applied alongside inline styles (which set the desktop 2-col layout);
+   this class only needs to override at the breakpoint. */
+@media (max-width: 560px) {
+  .responsive-grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* App header: keeps title/actions on one row on desktop, stacks on
+   narrow screens so buttons never get clipped or overlap the title. */
+@media (max-width: 640px) {
+  .app-header-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .app-header-actions {
+    justify-content: flex-end;
+  }
+}
+
+/* Modal content: full-bleed padding shrinks slightly on very narrow
+   screens so forms don't feel cramped against the edges. */
+@media (max-width: 400px) {
+  .modal-content-pad {
+    padding: 16px !important;
+  }
+}
+
+/* Tables (Reports page) already scroll horizontally via inline
+   overflow:auto — this just gives touch scrolling a hint on iOS. */
+table {
+  -webkit-overflow-scrolling: touch;
+}
