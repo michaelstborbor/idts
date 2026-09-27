@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Users } from "lucide-react";
+import { ShieldCheck, Users } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "../api/client.js";
 import { COLORS, STATUS_META } from "../constants.js";
@@ -11,6 +11,23 @@ function SummaryCard({ label, value, color }) {
     <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, padding: "14px 16px", backgroundColor: COLORS.white }}>
       <p style={{ fontSize: 24, fontWeight: 600, margin: 0, color: color || COLORS.ink }}>{value}</p>
       <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 2 }}>{label}</p>
+    </div>
+  );
+}
+
+// Visually distinct from the plain white stat cards — a filled badge with
+// a shield icon, specifically so "Fully Immunized (FIC)" stands out at a
+// glance rather than reading as just another number among several.
+function FullyImmunizedCard({ value }) {
+  return (
+    <div style={{ borderRadius: 12, padding: "14px 16px", backgroundColor: "#2F6B4F", display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ backgroundColor: "rgba(255,255,255,0.18)", borderRadius: 999, padding: 8, display: "flex", flexShrink: 0 }}>
+        <ShieldCheck size={20} color="#FFFFFF" />
+      </div>
+      <div>
+        <p style={{ fontSize: 24, fontWeight: 700, margin: 0, color: "#FFFFFF" }}>{value}</p>
+        <p style={{ fontSize: 13, color: "#E4F1EA", marginTop: 2 }}>Fully Immunized (FIC)</p>
+      </div>
     </div>
   );
 }
@@ -44,25 +61,28 @@ export default function DashboardPage({ token, childrenCount }) {
     );
   }
 
-  const chartData = STATUS_ORDER.filter((s) => stats.dose_status_counts[s] > 0).map((s) => ({
-    status: s,
-    label: STATUS_META[s].label,
-    count: stats.dose_status_counts[s],
-  }));
+  const chartData = [
+    ...STATUS_ORDER.filter((s) => stats.dose_status_counts[s] > 0).map((s) => ({
+      status: s,
+      label: STATUS_META[s].label,
+      count: stats.dose_status_counts[s],
+    })),
+    { status: "fully_immunized", label: "Fully immunized (FIC)", count: stats.fully_immunized },
+  ];
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto" }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginBottom: 24 }}>
         <SummaryCard label="Children registered" value={stats.registered} />
-        <SummaryCard label="Fully immunized (for age)" value={stats.fully_immunized} color="#2F6B4F" />
-        <SummaryCard label="Need attention" value={stats.needs_attention_children} color="#B4472F" />
+        <FullyImmunizedCard value={stats.fully_immunized} />
+        <SummaryCard label="Need attention now" value={stats.needs_attention_children} color="#B4472F" />
         <SummaryCard label="Doses given" value={stats.given_total} color="#2F6B4F" />
         <SummaryCard label="Cases in tracing" value={stats.cases_in_tracing} color="#8A6A1F" />
         <SummaryCard label="Pending return confirmation" value={stats.cases_pending_confirmation} color="#8A6A1F" />
       </div>
 
       <h3 style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6B6660", marginBottom: 12 }}>
-        All scheduled doses, by status
+        All scheduled doses, by status (Fully immunized = number of children)
       </h3>
       <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, padding: 16, backgroundColor: COLORS.white }}>
         {chartData.length === 0 ? (
@@ -71,20 +91,22 @@ export default function DashboardPage({ token, childrenCount }) {
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={chartData} margin={{ top: 8, right: 12, left: -12, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6B6660" }} interval={0} angle={-20} textAnchor="end" height={55} />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6B6660" }} interval={0} angle={-20} textAnchor="end" height={70} />
               <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#6B6660" }} />
               <Tooltip cursor={{ fill: COLORS.subtleBg }} contentStyle={{ borderRadius: 8, borderColor: COLORS.border, fontSize: 13 }} />
               <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                {chartData.map((d) => <Cell key={d.status} fill={STATUS_META[d.status].color} />)}
+                {chartData.map((d) => <Cell key={d.status} fill={d.status === "fully_immunized" ? "#1B4D3E" : STATUS_META[d.status].color} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         )}
       </div>
       <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 12, lineHeight: 1.6 }}>
-        "Fully immunized (for age)" means everything a child is currently old enough to need has
-        been given — it updates automatically as they age into new doses, it isn't a one-time
-        finish line.
+        <strong>Fully Immunized (FIC)</strong> means a child has actually received every dose in
+        the schedule up to and including Measles-Rubella dose 2 (MR2), per Ministry protocol — not
+        merely that nothing is currently due for their age. A young infant correctly cannot be FIC
+        yet even if nothing of theirs is overdue; "Need attention now" (age-relative) is a separate,
+        operational measure for who needs a visit soon.
       </p>
     </div>
   );
