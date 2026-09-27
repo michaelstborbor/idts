@@ -38,6 +38,7 @@ export default function App() {
   const [dueRows, setDueRows] = useState([]);
   const [openCases, setOpenCases] = useState([]);
   const [closedCases, setClosedCases] = useState([]);
+  const [fullyImmunizedIds, setFullyImmunizedIds] = useState(new Set());
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState("");
 
@@ -68,18 +69,20 @@ export default function App() {
     setDataLoading(true);
     setDataError("");
     try {
-      const [facilityList, childList, due, open, closed] = await Promise.all([
+      const [facilityList, childList, due, open, closed, dashboardStats] = await Promise.all([
         api.listFacilities(token),
         api.listChildren(token),
         api.getDueList(token),
         api.listDefaulterCases(token),
         api.listDefaulterCases(token, "closed"),
+        api.getDashboardStats(token),
       ]);
       setFacilities(facilityList);
       setChildren(childList);
       setDueRows(due);
       setOpenCases(open);
       setClosedCases(closed);
+      setFullyImmunizedIds(new Set(dashboardStats.fully_immunized_child_ids || []));
     } catch (err) {
       setDataError(err.message);
     } finally {
@@ -143,35 +146,42 @@ export default function App() {
     <div style={{ backgroundColor: COLORS.bg, minHeight: "100vh", fontFamily: "'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif" }}>
       <div style={{ padding: "20px 20px 0" }} className="app-header-pad">
         <div style={{ maxWidth: 760, margin: "0 auto 28px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+          <div className="app-header-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
             <div>
               <p style={{ fontSize: 12, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", color: COLORS.primary, marginBottom: 4 }}>
-                IDTS · {currentUser.full_name} ({currentUser.role.replace(/_/g, " ")})
+                IDTS
               </p>
               <h1 style={{ fontSize: 26, fontWeight: 600, color: COLORS.ink, margin: 0 }}>{viewTitle}</h1>
             </div>
-            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-              {showRegisterButton && (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
+              <p style={{ fontSize: 13, color: COLORS.muted, margin: 0, textAlign: "right" }}>
+                <strong style={{ color: COLORS.ink, fontWeight: 600 }}>{currentUser.full_name}</strong>
+                <br />
+                {currentUser.role.replace(/_/g, " ")}
+              </p>
+              <div className="app-header-actions" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {showRegisterButton && (
+                  <button
+                    onClick={() => setView("register")}
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 8, fontSize: 14, fontWeight: 500, color: "#fff", backgroundColor: COLORS.primary, border: "none", cursor: "pointer" }}
+                  >
+                    <UserPlus size={16} /> Register child
+                  </button>
+                )}
                 <button
-                  onClick={() => setView("register")}
-                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 8, fontSize: 14, fontWeight: 500, color: "#fff", backgroundColor: COLORS.primary, border: "none", cursor: "pointer" }}
+                  onClick={() => setView("account")}
+                  title="Account settings"
+                  style={{ padding: 10, borderRadius: 8, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer", display: "flex" }}
                 >
-                  <UserPlus size={16} /> Register child
+                  <Settings size={16} />
                 </button>
-              )}
-              <button
-                onClick={() => setView("account")}
-                title="Account settings"
-                style={{ padding: 10, borderRadius: 8, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer", display: "flex" }}
-              >
-                <Settings size={16} />
-              </button>
-              <button
-                onClick={handleLogout}
-                style={{ padding: "10px 14px", borderRadius: 8, fontSize: 14, fontWeight: 500, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer" }}
-              >
-                Sign out
-              </button>
+                <button
+                  onClick={handleLogout}
+                  style={{ padding: "10px 14px", borderRadius: 8, fontSize: 14, fontWeight: 500, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer" }}
+                >
+                  Sign out
+                </button>
+              </div>
             </div>
           </div>
 
@@ -260,6 +270,7 @@ export default function App() {
           <ChildrenListPage
             children={children}
             dueRowsByChildId={Object.fromEntries(dueRows.map((r) => [r.child.id, r]))}
+            fullyImmunizedIds={fullyImmunizedIds}
             loading={dataLoading}
             onOpenChild={(id) => { setActiveChildId(id); setView("profile"); }}
             onRegisterClick={() => setView("register")}
