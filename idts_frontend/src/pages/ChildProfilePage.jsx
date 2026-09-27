@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ChevronLeft, History, Pencil, Syringe, Trash2 } from "lucide-react";
+import { ChevronLeft, History, Pencil, ShieldCheck, Syringe, Trash2 } from "lucide-react";
 import { api } from "../api/client.js";
 import { COLORS, ageLabel, fmtDate } from "../constants.js";
 import { Modal, PrimaryButton, SecondaryButton, StatusBadge } from "../components/ui.jsx";
@@ -59,7 +59,14 @@ export default function ChildProfilePage({ token, childId, facilities, onBack, o
 
       <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
         <div>
-          <h2 style={{ fontSize: 24, fontWeight: 600, color: COLORS.ink, margin: 0 }}>{child.full_name}</h2>
+          <h2 style={{ fontSize: 24, fontWeight: 600, color: COLORS.ink, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            {child.full_name}
+            {child.fully_immunized && (
+              <span title="Fully Immunized (FIC)" style={{ display: "inline-flex", alignItems: "center", gap: 5, backgroundColor: "#2F6B4F", color: "#FFFFFF", borderRadius: 999, padding: "3px 10px", fontSize: 12, fontWeight: 500 }}>
+                <ShieldCheck size={13} /> Fully Immunized
+              </span>
+            )}
+          </h2>
           <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 4 }}>
             {ageLabel(child.dob)} · Born {fmtDate(child.dob)} · {child.sex === "F" ? "Female" : "Male"} · {child.system_id}
           </p>
