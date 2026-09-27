@@ -1,9 +1,9 @@
 import React from "react";
-import { Users } from "lucide-react";
+import { ShieldCheck, Users } from "lucide-react";
 import { COLORS, ageLabel } from "../constants.js";
 import { StatusBadge } from "../components/ui.jsx";
 
-export default function ChildrenListPage({ children, dueRowsByChildId, loading, onOpenChild, onRegisterClick }) {
+export default function ChildrenListPage({ children, dueRowsByChildId, fullyImmunizedIds, loading, onOpenChild, onRegisterClick }) {
   if (loading) return <p style={{ textAlign: "center", color: COLORS.muted }}>Loading…</p>;
 
   if (children.length === 0) {
@@ -28,6 +28,7 @@ export default function ChildrenListPage({ children, dueRowsByChildId, loading, 
     <div style={{ maxWidth: 640, margin: "0 auto", borderRadius: 12, border: `1px solid ${COLORS.border}`, overflow: "hidden", backgroundColor: COLORS.white }}>
       {children.map((c, i) => {
         const next = dueRowsByChildId ? dueRowsByChildId[c.id] : null;
+        const isFullyImmunized = fullyImmunizedIds && fullyImmunizedIds.has(c.id);
         return (
           <button
             key={c.id}
@@ -38,16 +39,25 @@ export default function ChildrenListPage({ children, dueRowsByChildId, loading, 
               borderTop: i === 0 ? "none" : `1px solid ${COLORS.border}`,
             }}
           >
-            <div style={{ minWidth: 0 }}>
-              <p style={{ fontWeight: 500, fontSize: 15, color: COLORS.ink, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.full_name}</p>
-              <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 2 }}>{ageLabel(c.dob)} · {c.system_id}</p>
+            <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 10 }}>
+              {isFullyImmunized && (
+                <span title="Fully Immunized (FIC)" aria-label="Fully Immunized" style={{ flexShrink: 0, display: "flex", backgroundColor: "#2F6B4F", borderRadius: 999, padding: 7 }}>
+                  <ShieldCheck size={18} color="#FFFFFF" />
+                </span>
+              )}
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontWeight: 500, fontSize: 15, color: COLORS.ink, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.full_name}</p>
+                <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 2 }}>{ageLabel(c.dob)} · {c.system_id}</p>
+              </div>
             </div>
-            {next && (
+            {next ? (
               <div style={{ textAlign: "right", flexShrink: 0 }}>
                 <StatusBadge status={next.dose.status} />
                 <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 4 }}>{next.dose.antigen} dose {next.dose.dose_number}</p>
               </div>
-            )}
+            ) : isFullyImmunized ? (
+              <span style={{ fontSize: 12, fontWeight: 500, color: "#2F6B4F", flexShrink: 0 }}>Fully Immunized</span>
+            ) : null}
           </button>
         );
       })}
