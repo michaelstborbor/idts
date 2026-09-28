@@ -258,7 +258,7 @@ export default function App() {
         ) : view === "reports" ? (
           <ReportsPage token={token} />
         ) : view === "admin" && isAdmin ? (
-          <AdminPage token={token} facilities={facilities} />
+            <AdminPage token={token} facilities={facilities} currentUserId={currentUser.id} />
         ) : view === "account" ? (
           <AccountSettingsPage
             token={token}
