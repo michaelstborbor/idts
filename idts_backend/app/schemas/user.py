@@ -37,3 +37,8 @@ class ProfileUpdate(BaseModel):
 class PasswordChangeRequest(BaseModel):
     current_password: str
     new_password: str = Field(min_length=8, max_length=200)
+
+
+class PasswordResetRequest(BaseModel):
+    """Admin-only: set a new temporary password for another user."""
+    new_password: str = Field(min_length=8, max_length=200)
