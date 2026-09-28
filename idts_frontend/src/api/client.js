@@ -109,6 +109,8 @@ export const api = {
     request(`/api/v1/users/${userId}`, { method: "PATCH", token, body: payload }),
     deleteUser: (token, userId) =>
     request(`/api/v1/users/${userId}`, { method: "DELETE", token }),
+    resetUserPassword: (token, userId, newPassword) =>
+    request(`/api/v1/users/${userId}/reset-password`, { method: "POST", token, body: { new_password: newPassword } }),
   createChw: (token, fullName, facilityId) =>
     request("/api/v1/users/chw", { method: "POST", token, body: { full_name: fullName, facility_id: facilityId } }),
 
