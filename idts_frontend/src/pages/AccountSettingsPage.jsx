@@ -1,9 +1,10 @@
 import React, { useState } from "react";
+import { ChevronLeft } from "lucide-react";
 import { api } from "../api/client.js";
 import { COLORS } from "../constants.js";
 import { ErrorText, Label, PrimaryButton, TextInput } from "../components/ui.jsx";
 
-export default function AccountSettingsPage({ token, currentUser, onProfileUpdated }) {
+export default function AccountSettingsPage({ token, currentUser, onProfileUpdated, onBack }) {
   const [fullName, setFullName] = useState(currentUser.full_name);
   const [profileError, setProfileError] = useState("");
   const [profileSaved, setProfileSaved] = useState(false);
@@ -54,6 +55,12 @@ export default function AccountSettingsPage({ token, currentUser, onProfileUpdat
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column", gap: 32 }}>
+            <button
+        onClick={onBack}
+        style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, color: COLORS.primary, background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: -16, alignSelf: "flex-start" }}
+      >
+        <ChevronLeft size={16} /> Back
+      </button>
       <div>
         <h3 style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6B6660", marginBottom: 12 }}>
           Profile
