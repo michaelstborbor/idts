@@ -107,6 +107,8 @@ export const api = {
   createUser: (token, payload) => request("/api/v1/users", { method: "POST", token, body: payload }),
   updateUser: (token, userId, payload) =>
     request(`/api/v1/users/${userId}`, { method: "PATCH", token, body: payload }),
+    deleteUser: (token, userId) =>
+    request(`/api/v1/users/${userId}`, { method: "DELETE", token }),
   createChw: (token, fullName, facilityId) =>
     request("/api/v1/users/chw", { method: "POST", token, body: { full_name: fullName, facility_id: facilityId } }),
 
