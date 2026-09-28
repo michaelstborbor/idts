@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_user, require_role
 from app.core.security import hash_password, verify_password
 from app.db.session import get_db
+from app.models.child import VaccinationEvent
+from app.models.defaulter import AuditLog, DefaulterCase, TracingAttempt
 from app.models.user import ROLES, User
 from app.schemas.child import UserOut
 from app.schemas.user import CHWCreate, PasswordChangeRequest, ProfileUpdate, UserAdminUpdate, UserCreate
@@ -185,9 +187,57 @@ def update_user(
         raise HTTPException(status_code=400, detail=f"role must be one of {ROLES}")
     if user.id == current_user.id and update_data.get("is_active") is False:
         raise HTTPException(status_code=400, detail="You cannot deactivate your own account.")
+    if user.id == current_user.id and "role" in update_data and update_data["role"] != current_user.role:
+        raise HTTPException(status_code=400, detail="You cannot change your own role.")
 
     for field, value in update_data.items():
         setattr(user, field, value.strip() if isinstance(value, str) else value)
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(
+    user_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("system_admin")),
+):
+    """
+    Permanently removes a user account — system_admin only. Works for any
+    role, including other system administrators.
+
+    Safety rules:
+    - An admin cannot remove their own account (lockout guard, same idea
+      as the deactivate guard in update_user). This also means at least one
+      active admin always remains.
+    - A user who has vaccination records, defaulter cases, tracing
+      attempts or audit-log entries linked to them cannot be permanently
+      removed: deleting them would break (or orphan) the clinical record
+      history. For those users the admin should deactivate the account
+      instead, which blocks login but keeps the history intact.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot remove your own account.")
+
+    has_records = (
+        db.query(VaccinationEvent).filter(VaccinationEvent.vaccinator_id == user.id).first() is not None
+        or db.query(DefaulterCase).filter(DefaulterCase.assigned_to_id == user.id).first() is not None
+        or db.query(TracingAttempt).filter(TracingAttempt.tracer_id == user.id).first() is not None
+        or db.query(AuditLog).filter(AuditLog.user_id == user.id).first() is not None
+    )
+    if has_records:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "This user has vaccination, follow-up or audit records linked to them, so they can't be "
+                "permanently removed without breaking the record history. Deactivate the account instead."
+            ),
+        )
+
+    db.delete(user)
+    db.commit()
+    return None
