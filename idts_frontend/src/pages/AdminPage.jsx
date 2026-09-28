@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Trash2, UserPlus, UserX, UserCheck } from "lucide-react";
+import { KeyRound, Trash2, UserPlus, UserX, UserCheck } from "lucide-react";
 import { api } from "../api/client.js";
 import { COLORS } from "../constants.js";
 import { ErrorText, Label, Modal, Pill, PrimaryButton, SecondaryButton, SelectInput, TextInput } from "../components/ui.jsx";
@@ -91,6 +91,73 @@ function CreateUserModal({ token, facilities, onCreated, onClose }) {
   );
 }
 
+function generateTempPassword() {
+  // Avoids look-alike characters (0/O, 1/l/I) so it's easy to read out or type.
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = new Uint32Array(12);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => chars[b % chars.length]).join("");
+}
+
+function ResetPasswordModal({ token, user, onClose }) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function submit() {
+    if (password.length < 8) return setError("Password must be at least 8 characters.");
+    setError("");
+    setSubmitting(true);
+    try {
+      await api.resetUserPassword(token, user.id, password);
+      setDone(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title={`Reset password — ${user.full_name}`} onClose={onClose}>
+      {done ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <p style={{ fontSize: 14, color: "#2F6B4F", margin: 0 }}>Password reset for @{user.username}.</p>
+          <p style={{ fontSize: 14, color: COLORS.ink, margin: 0 }}>
+            New temporary password: <strong style={{ fontFamily: "monospace", fontSize: 15 }}>{password}</strong>
+          </p>
+          <p style={{ fontSize: 12, color: COLORS.muted, margin: 0 }}>
+            Share this with the user directly. It won't be shown again after you close this window. They should change it under Account settings.
+          </p>
+          <PrimaryButton onClick={onClose}>Done</PrimaryButton>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <Label>New temporary password</Label>
+            <TextInput type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" />
+            <button
+              type="button"
+              onClick={() => setPassword(generateTempPassword())}
+              style={{ marginTop: 8, padding: 0, background: "none", border: "none", cursor: "pointer", fontSize: 13, color: COLORS.primary }}
+            >
+              Generate a random password
+            </button>
+          </div>
+          <ErrorText>{error}</ErrorText>
+          <div style={{ display: "flex", gap: 12 }}>
+            <SecondaryButton onClick={onClose} style={{ flex: 1 }}>Cancel</SecondaryButton>
+            <PrimaryButton onClick={submit} disabled={submitting} style={{ flex: 1 }}>
+              {submitting ? "Resetting…" : "Reset password"}
+            </PrimaryButton>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 export default function AdminPage({ token, facilities, currentUserId }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,6 +165,7 @@ export default function AdminPage({ token, facilities, currentUserId }) {
   const [showCreate, setShowCreate] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
   const [removingId, setRemovingId] = useState(null);
+  const [resetTarget, setResetTarget] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -197,6 +265,16 @@ export default function AdminPage({ token, facilities, currentUserId }) {
                     {u.is_active ? <UserX size={15} color="#8C2E1C" /> : <UserCheck size={15} color={COLORS.ink} />}
                   </button>
                   <button
+                    onClick={() => setResetTarget(u)}
+                    title="Reset password"
+                    style={{
+                      padding: 8, borderRadius: 8, border: `1px solid ${COLORS.inputBorder}`, backgroundColor: COLORS.subtleBg,
+                      cursor: "pointer", display: "flex", flexShrink: 0,
+                    }}
+                  >
+                    <KeyRound size={15} color={COLORS.ink} />
+                  </button>
+                  <button
                     onClick={() => removeUser(u)}
                     disabled={togglingId === u.id || removingId === u.id}
                     title="Remove permanently"
@@ -212,6 +290,10 @@ export default function AdminPage({ token, facilities, currentUserId }) {
             </div>
           ))}
         </div>
+      )}
+
+      {resetTarget && (
+        <ResetPasswordModal token={token} user={resetTarget} onClose={() => setResetTarget(null)} />
       )}
 
       {showCreate && (
