@@ -43,7 +43,7 @@ export default function App() {
   const [dataError, setDataError] = useState("");
 
   const [view, setView] = useState("dashboard");
-    const [viewBeforeAccount, setViewBeforeAccount] = useState("dashboard");
+  const [viewBeforeAccount, setViewBeforeAccount] = useState("dashboard");
   const [activeChildId, setActiveChildId] = useState(null);
   const [editingChild, setEditingChild] = useState(null);
   const [assignTarget, setAssignTarget] = useState(null);
