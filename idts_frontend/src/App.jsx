@@ -264,6 +264,7 @@ export default function App() {
             token={token}
             currentUser={currentUser}
             onProfileUpdated={(updated) => setCurrentUser(updated)}
+            onBack={() => setView(viewBeforeAccount)}
           />
         ) : view === "dashboard" ? (
           <DashboardPage token={token} childrenCount={children.length} />
