@@ -13,7 +13,14 @@ from app.models.child import VaccinationEvent
 from app.models.defaulter import AuditLog, DefaulterCase, TracingAttempt
 from app.models.user import ROLES, User
 from app.schemas.child import UserOut
-from app.schemas.user import CHWCreate, PasswordChangeRequest, ProfileUpdate, UserAdminUpdate, UserCreate
+from app.schemas.user import (
+    CHWCreate,
+    PasswordChangeRequest,
+    PasswordResetRequest,
+    ProfileUpdate,
+    UserAdminUpdate,
+    UserCreate,
+)
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
@@ -195,6 +202,36 @@ def update_user(
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.post("/{user_id}/reset-password", status_code=status.HTTP_204_NO_CONTENT)
+def reset_user_password(
+    user_id: uuid.UUID,
+    payload: PasswordResetRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("system_admin")),
+):
+    """
+    Admin-only: set a new temporary password for another user (any role,
+    active or deactivated) — for forgotten passwords. The admin shares the
+    new password with the user directly, and the user should change it
+    under Account settings.
+
+    An admin cannot use this on their own account: changing your own
+    password goes through /me/change-password, which requires the current
+    password. Note: sessions that are already logged in stay valid until
+    their token expires; deactivate the account if access must be cut off
+    immediately.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Use Account settings to change your own password.")
+
+    user.hashed_password = hash_password(payload.new_password)
+    db.commit()
+    return None
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
