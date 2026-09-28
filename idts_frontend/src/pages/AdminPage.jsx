@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { UserPlus, UserX, UserCheck } from "lucide-react";
+import { Trash2, UserPlus, UserX, UserCheck } from "lucide-react";
 import { api } from "../api/client.js";
 import { COLORS } from "../constants.js";
-import { ErrorText, Label, Modal, PrimaryButton, SecondaryButton, SelectInput, TextInput } from "../components/ui.jsx";
+import { ErrorText, Label, Modal, Pill, PrimaryButton, SecondaryButton, SelectInput, TextInput } from "../components/ui.jsx";
 
 const ROLE_LABELS = {
   system_admin: "System Administrator",
@@ -91,12 +91,13 @@ function CreateUserModal({ token, facilities, onCreated, onClose }) {
   );
 }
 
-export default function AdminPage({ token, facilities }) {
+export default function AdminPage({ token, facilities, currentUserId }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
+  const [removingId, setRemovingId] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -122,6 +123,23 @@ export default function AdminPage({ token, facilities }) {
       setError(err.message);
     } finally {
       setTogglingId(null);
+    }
+  }
+
+  async function removeUser(user) {
+    const ok = window.confirm(
+      `Permanently remove ${user.full_name} (@${user.username})?\n\nThis cannot be undone. If you only want to block their access, use Deactivate instead.`
+    );
+    if (!ok) return;
+    setRemovingId(user.id);
+    setError("");
+    try {
+      await api.deleteUser(token, user.id);
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setRemovingId(null);
     }
   }
 
@@ -156,6 +174,8 @@ export default function AdminPage({ token, facilities }) {
               <div style={{ minWidth: 0 }}>
                 <p style={{ fontSize: 15, fontWeight: 500, color: COLORS.ink, margin: 0 }}>
                   {u.full_name} <span style={{ color: COLORS.muted, fontWeight: 400 }}>@{u.username}</span>
+                  {u.role === "system_admin" && <span style={{ marginLeft: 8 }}><Pill label="Admin" color="#1D4E4A" bg="#DCEBE8" /></span>}
+                  {u.id === currentUserId && <span style={{ marginLeft: 6 }}><Pill label="You" color="#6B6660" bg="#EDEBE6" /></span>}
                 </p>
                 <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 2 }}>
                   {ROLE_LABELS[u.role] || u.role}
@@ -163,17 +183,32 @@ export default function AdminPage({ token, facilities }) {
                   {!u.is_active ? " · Deactivated" : ""}
                 </p>
               </div>
-              <button
-                onClick={() => toggleActive(u)}
-                disabled={togglingId === u.id}
-                title={u.is_active ? "Deactivate" : "Reactivate"}
-                style={{
-                  padding: 8, borderRadius: 8, border: `1px solid ${u.is_active ? "#F6D9D2" : COLORS.inputBorder}`,
-                  backgroundColor: u.is_active ? "#FBE9E4" : COLORS.subtleBg, cursor: "pointer", display: "flex", flexShrink: 0,
-                }}
-              >
-                {u.is_active ? <UserX size={15} color="#8C2E1C" /> : <UserCheck size={15} color={COLORS.ink} />}
-              </button>
+              {u.id !== currentUserId && (
+                <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                  <button
+                    onClick={() => toggleActive(u)}
+                    disabled={togglingId === u.id || removingId === u.id}
+                    title={u.is_active ? "Deactivate" : "Reactivate"}
+                    style={{
+                      padding: 8, borderRadius: 8, border: `1px solid ${u.is_active ? "#F6D9D2" : COLORS.inputBorder}`,
+                      backgroundColor: u.is_active ? "#FBE9E4" : COLORS.subtleBg, cursor: "pointer", display: "flex", flexShrink: 0,
+                    }}
+                  >
+                    {u.is_active ? <UserX size={15} color="#8C2E1C" /> : <UserCheck size={15} color={COLORS.ink} />}
+                  </button>
+                  <button
+                    onClick={() => removeUser(u)}
+                    disabled={togglingId === u.id || removingId === u.id}
+                    title="Remove permanently"
+                    style={{
+                      padding: 8, borderRadius: 8, border: "1px solid #F6D9D2", backgroundColor: "#FBE9E4",
+                      cursor: "pointer", display: "flex", flexShrink: 0,
+                    }}
+                  >
+                    <Trash2 size={15} color="#8C2E1C" />
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
