@@ -170,7 +170,7 @@ export default function App() {
                   </button>
                 )}
                 <button
-                  onClick={() => setView("account")}
+                  onClick={() => { if (view !== "account") setViewBeforeAccount(view); setView("account"); }}
                   title="Account settings"
                   style={{ padding: 10, borderRadius: 8, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer", display: "flex" }}
                 >
