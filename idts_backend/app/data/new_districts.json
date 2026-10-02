@@ -1,0 +1,1150 @@
+{
+  "Bo District": {
+    "province": "Southern Province",
+    "chiefdoms": {
+      "BADJIA": [
+        {
+          "name": "Ngelehun",
+          "type": "chc"
+        },
+        {
+          "name": "Njandama",
+          "type": "mchp"
+        },
+        {
+          "name": "Njagbahun",
+          "type": "mchp"
+        }
+      ],
+      "BAOMA": [
+        {
+          "name": "Baoma Station",
+          "type": "chp"
+        },
+        {
+          "name": "Faabu",
+          "type": "chp"
+        },
+        {
+          "name": "Gerehun",
+          "type": "chc"
+        },
+        {
+          "name": "Golu",
+          "type": "mchp"
+        },
+        {
+          "name": "Jembe",
+          "type": "chc"
+        },
+        {
+          "name": "Jormu",
+          "type": "mchp"
+        },
+        {
+          "name": "Kigbai",
+          "type": "mchp"
+        },
+        {
+          "name": "Mbundorbu",
+          "type": "mchp"
+        },
+        {
+          "name": "Pelewahun",
+          "type": "mchp"
+        },
+        {
+          "name": "Tugbebu",
+          "type": "chp"
+        },
+        {
+          "name": "Foindu",
+          "type": "mchp"
+        },
+        {
+          "name": "Yakaji",
+          "type": "mchp"
+        },
+        {
+          "name": "Gbahama",
+          "type": "chp"
+        },
+        {
+          "name": "Yamandu",
+          "type": "chc"
+        },
+        {
+          "name": "Kpunbu",
+          "type": "mchp"
+        },
+        {
+          "name": "Jan Christian Helvings",
+          "type": "clinic"
+        },
+        {
+          "name": "Blamawo",
+          "type": "mchp"
+        }
+      ],
+      "BAGWE": [
+        {
+          "name": "Barlie",
+          "type": "mchp"
+        },
+        {
+          "name": "Benduma",
+          "type": "mchp"
+        },
+        {
+          "name": "Kpetema",
+          "type": "mchp"
+        },
+        {
+          "name": "Kondiama",
+          "type": "mchp"
+        },
+        {
+          "name": "Mendewa",
+          "type": "mchp"
+        },
+        {
+          "name": "Ngalu",
+          "type": "chc"
+        },
+        {
+          "name": "Samie Buma",
+          "type": "mchp"
+        }
+      ],
+      "Bagbo": [
+        {
+          "name": "Bum Kaku",
+          "type": "mchp"
+        },
+        {
+          "name": "Gbangbalia",
+          "type": "mchp"
+        },
+        {
+          "name": "Jimmi",
+          "type": "chc"
+        },
+        {
+          "name": "Kasse",
+          "type": "mchp"
+        },
+        {
+          "name": "Momajo",
+          "type": "chp"
+        },
+        {
+          "name": "Niagorehun",
+          "type": "chp"
+        },
+        {
+          "name": "Mano Yorgbo",
+          "type": "mchp"
+        },
+        {
+          "name": "Kakama",
+          "type": "mchp"
+        },
+        {
+          "name": "Limba",
+          "type": "chp"
+        },
+        {
+          "name": "Senehun Ngola",
+          "type": "mchp"
+        }
+      ],
+      "Bumpe": [
+        {
+          "name": "Bumpe",
+          "type": "chc"
+        },
+        {
+          "name": "Kaniya",
+          "type": "mchp"
+        },
+        {
+          "name": "Kpetema",
+          "type": "chp"
+        },
+        {
+          "name": "Mokpende",
+          "type": "mchp"
+        },
+        {
+          "name": "Sahn Bumpeh",
+          "type": "chp"
+        },
+        {
+          "name": "Serabu",
+          "type": "chc"
+        },
+        {
+          "name": "Taninahun",
+          "type": "chp"
+        },
+        {
+          "name": "Yengema",
+          "type": "mchp"
+        },
+        {
+          "name": "Mokoba",
+          "type": "mchp"
+        },
+        {
+          "name": "Walihun",
+          "type": "mchp"
+        },
+        {
+          "name": "Buma",
+          "type": "mchp"
+        },
+        {
+          "name": "Ngolahun",
+          "type": "chp"
+        },
+        {
+          "name": "Makayonie",
+          "type": "mchp"
+        },
+        {
+          "name": "Bongor",
+          "type": "mchp"
+        },
+        {
+          "name": "Niagorehun Vakie",
+          "type": "mchp"
+        },
+        {
+          "name": "Kabiama",
+          "type": "mchp"
+        },
+        {
+          "name": "Serabu Mission Hospital",
+          "type": "hospital"
+        }
+      ],
+      "Gbo": [
+        {
+          "name": "Gbaiima",
+          "type": "chc"
+        },
+        {
+          "name": "Sembehun Mamagew",
+          "type": "mchp"
+        }
+      ],
+      "Jaiama": [
+        {
+          "name": "Mano-Jaiama",
+          "type": "chp"
+        },
+        {
+          "name": "Koribondo",
+          "type": "chc"
+        },
+        {
+          "name": "Niayahun",
+          "type": "chp"
+        }
+      ],
+      "Bongor": [
+        {
+          "name": "Gbaama",
+          "type": "mchp"
+        },
+        {
+          "name": "Mamboma",
+          "type": "chp"
+        },
+        {
+          "name": "Telu",
+          "type": "chc"
+        },
+        {
+          "name": "Lowuma",
+          "type": "mchp"
+        }
+      ],
+      "Bo Town": [
+        {
+          "name": "Break Through",
+          "type": "mchp"
+        },
+        {
+          "name": "UNIMUS",
+          "type": "mchp"
+        },
+        {
+          "name": "Favour",
+          "type": "mchp"
+        },
+        {
+          "name": "Nafaya",
+          "type": "mchp"
+        },
+        {
+          "name": "Tengbewabu",
+          "type": "mchp"
+        },
+        {
+          "name": "Batiama Layout",
+          "type": "mchp"
+        },
+        {
+          "name": "Morning Start",
+          "type": "chp"
+        },
+        {
+          "name": "Bo School Bay",
+          "type": "chp"
+        },
+        {
+          "name": "Brima Town",
+          "type": "chp"
+        },
+        {
+          "name": "Kandeh Town",
+          "type": "chp"
+        },
+        {
+          "name": "Gender",
+          "type": "chp"
+        },
+        {
+          "name": "Simbo Town",
+          "type": "chp"
+        },
+        {
+          "name": "Teaching Health Center - Kowama - Njala University",
+          "type": "chc"
+        },
+        {
+          "name": "Needy Messima",
+          "type": "chc"
+        },
+        {
+          "name": "New Police Barracks",
+          "type": "chc"
+        },
+        {
+          "name": "Topkoi Town",
+          "type": "chc"
+        },
+        {
+          "name": "Yemoh Town",
+          "type": "chc"
+        },
+        {
+          "name": "Kakua Static",
+          "type": "chc"
+        },
+        {
+          "name": "Gbotima",
+          "type": "chc"
+        },
+        {
+          "name": "Kindia Town Maternal and Child Health Center",
+          "type": "chc"
+        },
+        {
+          "name": "Agape Way",
+          "type": "chc"
+        },
+        {
+          "name": "SLRCS (Bo) Clinic",
+          "type": "chc"
+        },
+        {
+          "name": "Praise Foundation",
+          "type": "chc"
+        },
+        {
+          "name": "Dr JC Boima Memorial Clinic",
+          "type": "clinic"
+        },
+        {
+          "name": "Walk In Medical Associate",
+          "type": "clinic"
+        },
+        {
+          "name": "Rescue Health Care",
+          "type": "clinic"
+        },
+        {
+          "name": "Spllenz",
+          "type": "clinic"
+        },
+        {
+          "name": "Egyptian",
+          "type": "clinic"
+        },
+        {
+          "name": "Mamasa Life Saving",
+          "type": "hospital"
+        },
+        {
+          "name": "Kindoya",
+          "type": "hospital"
+        },
+        {
+          "name": "Gilas's",
+          "type": "hospital"
+        },
+        {
+          "name": "Mercy UMC",
+          "type": "hospital"
+        },
+        {
+          "name": "ATM Vikitiva",
+          "type": "hospital"
+        },
+        {
+          "name": "Care and Cure",
+          "type": "hospital"
+        },
+        {
+          "name": "Dasse",
+          "type": "hospital"
+        },
+        {
+          "name": "Bo Government Hospital",
+          "type": "hospital"
+        }
+      ],
+      "Kakua": [
+        {
+          "name": "Bandajuma",
+          "type": "mchp"
+        },
+        {
+          "name": "M.M Maternity",
+          "type": "mchp"
+        },
+        {
+          "name": "Fullawahun",
+          "type": "mchp"
+        },
+        {
+          "name": "Mid Land",
+          "type": "mchp"
+        },
+        {
+          "name": "Ndegbomie",
+          "type": "mchp"
+        },
+        {
+          "name": "Nduvuibu",
+          "type": "mchp"
+        },
+        {
+          "name": "Gbanja Town",
+          "type": "mchp"
+        },
+        {
+          "name": "Gbongboma",
+          "type": "mchp"
+        },
+        {
+          "name": "Althe",
+          "type": "chp"
+        },
+        {
+          "name": "Fengehun",
+          "type": "chp"
+        },
+        {
+          "name": "Maguama",
+          "type": "chp"
+        },
+        {
+          "name": "United Methodist Manjama",
+          "type": "chc"
+        },
+        {
+          "name": "Bo Children's Hospital",
+          "type": "hospital"
+        }
+      ],
+      "Komboya": [
+        {
+          "name": "Komboya Gbauja",
+          "type": "mchp"
+        },
+        {
+          "name": "Njala",
+          "type": "chc"
+        },
+        {
+          "name": "Niagorehun",
+          "type": "mchp"
+        },
+        {
+          "name": "Teibor",
+          "type": "chp"
+        },
+        {
+          "name": "Mano",
+          "type": "mchp"
+        },
+        {
+          "name": "Kpamajama",
+          "type": "mchp"
+        },
+        {
+          "name": "Gumahun",
+          "type": "mchp"
+        }
+      ],
+      "Lugbu": [
+        {
+          "name": "Feiba",
+          "type": "chp"
+        },
+        {
+          "name": "Karleh",
+          "type": "mchp"
+        },
+        {
+          "name": "Kpetewoma",
+          "type": "chp"
+        },
+        {
+          "name": "Ngieyehun",
+          "type": "mchp"
+        },
+        {
+          "name": "Sumbuya",
+          "type": "chc"
+        },
+        {
+          "name": "Upper Saama",
+          "type": "mchp"
+        },
+        {
+          "name": "Yambama",
+          "type": "chp"
+        },
+        {
+          "name": "Bontiwo",
+          "type": "mchp"
+        },
+        {
+          "name": "Hima",
+          "type": "mchp"
+        },
+        {
+          "name": "Sierra Tropical Center",
+          "type": "clinic"
+        }
+      ],
+      "Naiwa Lenge": [
+        {
+          "name": "Nengbema",
+          "type": "chp"
+        },
+        {
+          "name": "Ngogbebu",
+          "type": "mchp"
+        },
+        {
+          "name": "Sahn",
+          "type": "chc"
+        },
+        {
+          "name": "Korbu",
+          "type": "mchp"
+        },
+        {
+          "name": "Pendebu",
+          "type": "mchp"
+        }
+      ],
+      "Selenga": [
+        {
+          "name": "Damballa",
+          "type": "chc"
+        },
+        {
+          "name": "Gbangba",
+          "type": "mchp"
+        }
+      ],
+      "Tikonko": [
+        {
+          "name": "Gondama",
+          "type": "chc"
+        },
+        {
+          "name": "Griema",
+          "type": "mchp"
+        },
+        {
+          "name": "Kassama",
+          "type": "mchp"
+        },
+        {
+          "name": "Mattru on the Rail",
+          "type": "chp"
+        },
+        {
+          "name": "Sembehun 17",
+          "type": "chp"
+        },
+        {
+          "name": "Tikonko",
+          "type": "chc"
+        },
+        {
+          "name": "Zaion (Bendawa Town)",
+          "type": "chp"
+        },
+        {
+          "name": "Sebehun Tarbay",
+          "type": "mchp"
+        },
+        {
+          "name": "Theresa-Hakim",
+          "type": "chp"
+        },
+        {
+          "name": "We Care",
+          "type": "chp"
+        },
+        {
+          "name": "Haikal",
+          "type": "chc"
+        },
+        {
+          "name": "Mendewa Layout",
+          "type": "chc"
+        },
+        {
+          "name": "Geoma",
+          "type": "mchp"
+        },
+        {
+          "name": "Kendeyella",
+          "type": "mchp"
+        },
+        {
+          "name": "Towama",
+          "type": "chp"
+        },
+        {
+          "name": "Bockma",
+          "type": "chp"
+        },
+        {
+          "name": "Veronica",
+          "type": "mchp"
+        }
+      ],
+      "Valunia": [
+        {
+          "name": "Baomahun",
+          "type": "chc"
+        },
+        {
+          "name": "Foya",
+          "type": "chp"
+        },
+        {
+          "name": "Grima",
+          "type": "chp"
+        },
+        {
+          "name": "Kpewama",
+          "type": "mchp"
+        },
+        {
+          "name": "Kpuabu",
+          "type": "mchp"
+        },
+        {
+          "name": "Mongere",
+          "type": "chc"
+        },
+        {
+          "name": "Ngolahun Jabaty",
+          "type": "chp"
+        },
+        {
+          "name": "Pujehun",
+          "type": "chp"
+        },
+        {
+          "name": "Kenema Blago",
+          "type": "chp"
+        }
+      ],
+      "Wonde": [
+        {
+          "name": "Bathurst",
+          "type": "chp"
+        },
+        {
+          "name": "Fanima",
+          "type": "mchp"
+        },
+        {
+          "name": "Kambawama",
+          "type": "mchp"
+        },
+        {
+          "name": "Gboyama",
+          "type": "chc"
+        }
+      ]
+    }
+  },
+  "Pujehun District": {
+    "province": "Southern Province",
+    "chiefdoms": {
+      "Barri": [
+        {
+          "name": "Bandasuma",
+          "type": "chc"
+        },
+        {
+          "name": "Jeoma Barri",
+          "type": "mchp"
+        },
+        {
+          "name": "Konia",
+          "type": "mchp"
+        },
+        {
+          "name": "Kundorwahun",
+          "type": "chp"
+        },
+        {
+          "name": "Njaluahun",
+          "type": "chp"
+        },
+        {
+          "name": "Potoru",
+          "type": "chc"
+        },
+        {
+          "name": "Saahun",
+          "type": "mchp"
+        },
+        {
+          "name": "Tambeiyama",
+          "type": "mchp"
+        },
+        {
+          "name": "Taninahun",
+          "type": "mchp"
+        },
+        {
+          "name": "Vaama",
+          "type": "chp"
+        },
+        {
+          "name": "Waiima",
+          "type": "mchp"
+        }
+      ],
+      "Gallinas": [
+        {
+          "name": "Bandama",
+          "type": "mchp"
+        },
+        {
+          "name": "Blama Massaquoi",
+          "type": "chc"
+        },
+        {
+          "name": "Fonikoh",
+          "type": "mchp"
+        },
+        {
+          "name": "Funyehun",
+          "type": "chp"
+        },
+        {
+          "name": "Kpetema",
+          "type": "mchp"
+        },
+        {
+          "name": "Kpowubu",
+          "type": "mchp"
+        },
+        {
+          "name": "Makorma",
+          "type": "chp"
+        }
+      ],
+      "Kabonde": [
+        {
+          "name": "Pehala",
+          "type": "chc"
+        }
+      ],
+      "Kpaka": [
+        {
+          "name": "Liya",
+          "type": "mchp"
+        },
+        {
+          "name": "Massam",
+          "type": "chc"
+        },
+        {
+          "name": "Saahun",
+          "type": "mchp"
+        },
+        {
+          "name": "Semabu",
+          "type": "mchp"
+        },
+        {
+          "name": "Sumbuya Bessima",
+          "type": "chp"
+        }
+      ],
+      "Kpanga": [
+        {
+          "name": "Basalleh",
+          "type": "mchp"
+        },
+        {
+          "name": "Blama Puilla",
+          "type": "mchp"
+        },
+        {
+          "name": "Bomu Samba",
+          "type": "mchp"
+        },
+        {
+          "name": "Dandabu",
+          "type": "chp"
+        },
+        {
+          "name": "Gbondapi",
+          "type": "chc"
+        },
+        {
+          "name": "Gibina",
+          "type": "mchp"
+        },
+        {
+          "name": "Mandeima",
+          "type": "mchp"
+        },
+        {
+          "name": "Pujehun Static",
+          "type": "chc"
+        },
+        {
+          "name": "Salima Samba",
+          "type": "mchp"
+        },
+        {
+          "name": "Sawula",
+          "type": "mchp"
+        },
+        {
+          "name": "Sorbeh Grima",
+          "type": "mchp"
+        },
+        {
+          "name": "Taninahun Makemuma",
+          "type": "mchp"
+        },
+        {
+          "name": "Tongay",
+          "type": "mchp"
+        },
+        {
+          "name": "Vawahun Kayimba",
+          "type": "mchp"
+        }
+      ],
+      "Kpanga Krim": [
+        {
+          "name": "Bayama",
+          "type": "mchp"
+        },
+        {
+          "name": "Borborbu",
+          "type": "mchp"
+        },
+        {
+          "name": "Gobaru",
+          "type": "chc"
+        },
+        {
+          "name": "Vaama Krim",
+          "type": "mchp"
+        }
+      ],
+      "Makpele": [
+        {
+          "name": "Dumagbe",
+          "type": "mchp"
+        },
+        {
+          "name": "Gbaa",
+          "type": "chp"
+        },
+        {
+          "name": "Gbahama",
+          "type": "mchp"
+        },
+        {
+          "name": "Gissiwolo",
+          "type": "mchp"
+        },
+        {
+          "name": "Gofor",
+          "type": "chp"
+        },
+        {
+          "name": "Ndombu",
+          "type": "mchp"
+        },
+        {
+          "name": "Pewa",
+          "type": "mchp"
+        },
+        {
+          "name": "Zimmi",
+          "type": "chc"
+        }
+      ],
+      "Malen": [
+        {
+          "name": "Bendu",
+          "type": "mchp"
+        },
+        {
+          "name": "Hongai",
+          "type": "chp"
+        },
+        {
+          "name": "Jao",
+          "type": "mchp"
+        },
+        {
+          "name": "Ngandorhun",
+          "type": "mchp"
+        },
+        {
+          "name": "Nianyahun",
+          "type": "mchp"
+        },
+        {
+          "name": "Nyandehun",
+          "type": "mchp"
+        },
+        {
+          "name": "Sahn",
+          "type": "chc"
+        },
+        {
+          "name": "Sengema",
+          "type": "chp"
+        },
+        {
+          "name": "Taninahun",
+          "type": "chp"
+        }
+      ],
+      "Mano Sakrim": [
+        {
+          "name": "Bengani",
+          "type": "mchp"
+        },
+        {
+          "name": "Gombu",
+          "type": "mchp"
+        },
+        {
+          "name": "Kassay",
+          "type": "mchp"
+        },
+        {
+          "name": "Mano Gbongema",
+          "type": "chc"
+        },
+        {
+          "name": "Mende MSK",
+          "type": "mchp"
+        },
+        {
+          "name": "Nyandehun (MSK)",
+          "type": "mchp"
+        },
+        {
+          "name": "Senbengu",
+          "type": "mchp"
+        }
+      ],
+      "Pejeh": [
+        {
+          "name": "Bongay",
+          "type": "mchp"
+        },
+        {
+          "name": "Bumbeh",
+          "type": "mchp"
+        },
+        {
+          "name": "Futa Pejeh",
+          "type": "chc"
+        },
+        {
+          "name": "Helebu",
+          "type": "mchp"
+        },
+        {
+          "name": "Pejewa",
+          "type": "mchp"
+        }
+      ],
+      "Perri": [
+        {
+          "name": "Blama Perri",
+          "type": "mchp"
+        },
+        {
+          "name": "Bomi",
+          "type": "mchp"
+        },
+        {
+          "name": "Bumpeh",
+          "type": "chc"
+        },
+        {
+          "name": "Falaba",
+          "type": "chp"
+        },
+        {
+          "name": "Kowama",
+          "type": "mchp"
+        },
+        {
+          "name": "Ngajubaoma/Missibu",
+          "type": "mchp"
+        },
+        {
+          "name": "Saama Perri",
+          "type": "mchp"
+        }
+      ],
+      "Soro Gbeima": [
+        {
+          "name": "Fairo",
+          "type": "chc"
+        },
+        {
+          "name": "Fanima (Soro)",
+          "type": "chp"
+        },
+        {
+          "name": "Futa Golawoma",
+          "type": "mchp"
+        },
+        {
+          "name": "Gondama Massaquoi",
+          "type": "mchp"
+        },
+        {
+          "name": "Jendema",
+          "type": "chc"
+        },
+        {
+          "name": "Koijeh",
+          "type": "mchp"
+        },
+        {
+          "name": "Malema 1",
+          "type": "mchp"
+        },
+        {
+          "name": "Malema 2",
+          "type": "mchp"
+        },
+        {
+          "name": "Navai",
+          "type": "mchp"
+        },
+        {
+          "name": "Sengama Soro",
+          "type": "mchp"
+        },
+        {
+          "name": "Sulima",
+          "type": "chp"
+        },
+        {
+          "name": "Tindor",
+          "type": "mchp"
+        },
+        {
+          "name": "Wai",
+          "type": "mchp"
+        }
+      ],
+      "Sowa": [
+        {
+          "name": "Bandajuma",
+          "type": "chc"
+        },
+        {
+          "name": "Geoma Jarjoh",
+          "type": "chp"
+        },
+        {
+          "name": "Lower Komende",
+          "type": "mchp"
+        },
+        {
+          "name": "Upper Komende",
+          "type": "mchp"
+        },
+        {
+          "name": "Vaawahun Sowa",
+          "type": "mchp"
+        }
+      ],
+      "Yakemoh Kpukumu Krim (YKK)": [
+        {
+          "name": "Bangorma",
+          "type": "mchp"
+        },
+        {
+          "name": "Borma",
+          "type": "mchp"
+        },
+        {
+          "name": "Karlu",
+          "type": "chc"
+        },
+        {
+          "name": "Kombema",
+          "type": "mchp"
+        },
+        {
+          "name": "Kobonpi",
+          "type": "mchp"
+        },
+        {
+          "name": "Messima",
+          "type": "mchp"
+        },
+        {
+          "name": "Sama Sowende",
+          "type": "mchp"
+        }
+      ]
+    }
+  }
+}
