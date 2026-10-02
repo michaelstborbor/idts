@@ -17,6 +17,22 @@ export const COLORS = {
 // on very wide monitors.
 export const CONTENT_MAX_WIDTH = 1180;
 
+// Groups a /api/v1/facilities list by district (each facility now carries
+// its chiefdom + district name), for grouped <optgroup> dropdowns now that
+// facility lists span more than one district.
+export function groupFacilitiesByDistrict(facilities) {
+  const groups = {};
+  for (const f of facilities) {
+    const key = f.district || "Facilities";
+    (groups[key] = groups[key] || []).push(f);
+  }
+  return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+}
+
+export function facilityOptionLabel(f) {
+  return f.chiefdom ? `${f.name} — ${f.chiefdom}` : f.name;
+}
+
 export const STATUS_META = {
   not_yet_due: { label: "Not yet due", color: "#8A8478", bg: "#F1EFEA", icon: Clock },
   due_soon: { label: "Due soon", color: "#8A6A1F", bg: "#FBF1DC", icon: Clock },
