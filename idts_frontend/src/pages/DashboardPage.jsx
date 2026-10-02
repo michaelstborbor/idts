@@ -61,14 +61,22 @@ export default function DashboardPage({ token, childrenCount }) {
     );
   }
 
-  const chartData = STATUS_ORDER.filter((s) => stats.dose_status_counts[s] > 0).map((s) => ({
-    status: s,
-    label: STATUS_META[s].label,
-    count: stats.dose_status_counts[s],
-  }));
+  const chartData = [
+    ...STATUS_ORDER.filter((s) => stats.dose_status_counts[s] > 0).map((s) => ({
+      status: s,
+      label: STATUS_META[s].label,
+      count: stats.dose_status_counts[s],
+    })),
+    { status: "fully_immunized", label: "Fully immunized (FIC)", count: stats.fully_immunized },
+  ];
 
   return (
     <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto" }}>
+      {stats.scope_label && (
+        <p style={{ fontSize: 13, color: COLORS.muted, margin: "0 0 12px" }}>
+          Showing data for: <strong style={{ color: COLORS.ink }}>{stats.scope_label}</strong>
+        </p>
+      )}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginBottom: 24 }}>
         <SummaryCard label="Children registered" value={stats.registered} />
         <FullyImmunizedCard value={stats.fully_immunized} />
@@ -79,7 +87,7 @@ export default function DashboardPage({ token, childrenCount }) {
       </div>
 
       <h3 style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6B6660", marginBottom: 12 }}>
-        All scheduled doses, by status
+        All scheduled doses, by status (Fully immunized = number of children)
       </h3>
       <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, padding: 16, backgroundColor: COLORS.white }}>
         {chartData.length === 0 ? (
@@ -88,11 +96,11 @@ export default function DashboardPage({ token, childrenCount }) {
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={chartData} margin={{ top: 8, right: 12, left: -12, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6B6660" }} interval={0} angle={-20} textAnchor="end" height={55} />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6B6660" }} interval={0} angle={-20} textAnchor="end" height={70} />
               <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#6B6660" }} />
               <Tooltip cursor={{ fill: COLORS.subtleBg }} contentStyle={{ borderRadius: 8, borderColor: COLORS.border, fontSize: 13 }} />
               <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                {chartData.map((d) => <Cell key={d.status} fill={STATUS_META[d.status].color} />)}
+                {chartData.map((d) => <Cell key={d.status} fill={d.status === "fully_immunized" ? "#1B4D3E" : STATUS_META[d.status].color} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Download } from "lucide-react";
 import { api } from "../api/client.js";
 import { COLORS, CONTENT_MAX_WIDTH, SESSION_TYPES, todayIso } from "../constants.js";
@@ -25,6 +25,182 @@ function downloadCsv(csvText, filename) {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+const GROUP_LABELS = {
+  facility: "By facility",
+  user: "By user",
+  chiefdom: "By chiefdom",
+  district: "By district",
+  country: "By country",
+};
+
+function aggregateToCsv(report) {
+  const isUser = report.group_by === "user";
+  const header = isUser
+    ? "Name,Details,Doses recorded,Tracing attempts,Cases assigned"
+    : "Name,Details,Children registered,Fully immunized (FIC),Need attention,Doses given,Open cases,Cases returned";
+  const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const line = (r) =>
+    isUser
+      ? [q(r.label), q(r.sublabel), r.doses_given, r.tracing_attempts ?? 0, r.cases_assigned ?? 0].join(",")
+      : [q(r.label), q(r.sublabel), r.registered ?? 0, r.fully_immunized ?? 0, r.needs_attention ?? 0, r.doses_given, r.cases_open ?? 0, r.cases_returned ?? 0].join(",");
+  const meta = `Scope,${q(report.scope_label)}\nBreakdown,${report.group_by}\nPeriod,${report.start_date || "all time"} to ${report.end_date || "present"}\n\n`;
+  return meta + header + "\n" + [...report.rows, report.totals].map(line).join("\n") + "\n";
+}
+
+function AggregateSection({ token, startDate, endDate }) {
+  const [scope, setScope] = useState(null);
+  const [groupBy, setGroupBy] = useState("facility");
+  const [report, setReport] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    api.getReportScope(token)
+      .then((info) => {
+        setScope(info);
+        if (!info.allowed_group_by.includes("facility")) setGroupBy(info.allowed_group_by[0]);
+      })
+      .catch((err) => setError(err.message));
+  }, [token]);
+
+  async function run() {
+    if (startDate && endDate && startDate > endDate) return setError("Start date can't be after end date.");
+    setError("");
+    setLoading(true);
+    try {
+      setReport(await api.getAggregateReport(token, { groupBy, startDate: startDate || undefined, endDate: endDate || undefined }));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!scope) return error ? <ErrorText>{error}</ErrorText> : null;
+
+  const isUser = groupBy === "user";
+  const th = { textAlign: "right", padding: "10px 14px", color: COLORS.ink, fontWeight: 600, borderBottom: `1px solid ${COLORS.border}`, whiteSpace: "nowrap" };
+  const td = { padding: "10px 14px", textAlign: "right", color: COLORS.muted };
+  const tdTotal = { ...td, color: COLORS.ink };
+
+  return (
+    <div style={{ marginTop: 32 }}>
+      <h3 style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6B6660", marginBottom: 12 }}>
+        Aggregate report
+      </h3>
+      <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, padding: 20, backgroundColor: COLORS.white, marginBottom: 20 }}>
+        <p style={{ fontSize: 13, color: COLORS.muted, margin: "0 0 12px" }}>
+          Showing data for: <strong style={{ color: COLORS.ink }}>{scope.scope_label}</strong>. Uses the dates above for doses and tracing activity; child counts are as of today.
+        </p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+          {scope.allowed_group_by.map((g) => (
+            <button
+              key={g}
+              onClick={() => { setGroupBy(g); setReport(null); }}
+              style={{
+                padding: "6px 14px", borderRadius: 999, fontSize: 14, fontWeight: 500, cursor: "pointer",
+                border: `1px solid ${groupBy === g ? COLORS.primary : COLORS.inputBorder}`,
+                backgroundColor: groupBy === g ? COLORS.primary : COLORS.white,
+                color: groupBy === g ? "#fff" : COLORS.ink,
+              }}
+            >
+              {GROUP_LABELS[g] || g}
+            </button>
+          ))}
+        </div>
+        <ErrorText>{error}</ErrorText>
+        <div style={{ display: "flex", gap: 12, marginTop: error ? 12 : 0 }}>
+          <PrimaryButton onClick={run} disabled={loading}>{loading ? "Running…" : "Run aggregate report"}</PrimaryButton>
+          {report && (
+            <button
+              onClick={() => downloadCsv(aggregateToCsv(report), `idts-aggregate-${report.group_by}-${todayIso()}.csv`)}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 8, fontSize: 14, fontWeight: 500, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer" }}
+            >
+              <Download size={15} /> Download CSV
+            </button>
+          )}
+        </div>
+      </div>
+
+      {report && (
+        report.rows.length === 0 ? (
+          <p style={{ textAlign: "center", color: COLORS.muted }}>No data for this breakdown.</p>
+        ) : (
+          <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, overflow: "auto", backgroundColor: COLORS.white }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+              <thead>
+                <tr style={{ backgroundColor: COLORS.subtleBg }}>
+                  <th style={{ ...th, textAlign: "left" }}>{(GROUP_LABELS[report.group_by] || "By name").replace("By ", "")}</th>
+                  {isUser ? (
+                    <>
+                      <th style={th}>Doses recorded</th>
+                      <th style={th}>Tracing attempts</th>
+                      <th style={th}>Cases assigned</th>
+                    </>
+                  ) : (
+                    <>
+                      <th style={th}>Children</th>
+                      <th style={th}>Fully immunized</th>
+                      <th style={th}>Need attention</th>
+                      <th style={th}>Doses given</th>
+                      <th style={th}>Open cases</th>
+                    </>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {report.rows.map((r, i) => (
+                  <tr key={r.key} style={{ borderTop: i === 0 ? "none" : `1px solid ${COLORS.border}` }}>
+                    <td style={{ padding: "10px 14px", color: COLORS.ink, textAlign: "left" }}>
+                      {r.label}
+                      {r.sublabel && <div style={{ fontSize: 12, color: COLORS.muted }}>{r.sublabel}</div>}
+                    </td>
+                    {isUser ? (
+                      <>
+                        <td style={td}>{r.doses_given}</td>
+                        <td style={td}>{r.tracing_attempts ?? 0}</td>
+                        <td style={td}>{r.cases_assigned ?? 0}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td style={td}>{r.registered ?? 0}</td>
+                        <td style={td}>{r.fully_immunized ?? 0}</td>
+                        <td style={td}>{r.needs_attention ?? 0}</td>
+                        <td style={td}>{r.doses_given}</td>
+                        <td style={td}>{r.cases_open ?? 0}</td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr style={{ borderTop: `1px solid ${COLORS.border}`, backgroundColor: COLORS.subtleBg, fontWeight: 600 }}>
+                  <td style={{ padding: "10px 14px", color: COLORS.ink, textAlign: "left" }}>Total</td>
+                  {isUser ? (
+                    <>
+                      <td style={tdTotal}>{report.totals.doses_given}</td>
+                      <td style={tdTotal}>{report.totals.tracing_attempts ?? 0}</td>
+                      <td style={tdTotal}>{report.totals.cases_assigned ?? 0}</td>
+                    </>
+                  ) : (
+                    <>
+                      <td style={tdTotal}>{report.totals.registered ?? 0}</td>
+                      <td style={tdTotal}>{report.totals.fully_immunized ?? 0}</td>
+                      <td style={tdTotal}>{report.totals.needs_attention ?? 0}</td>
+                      <td style={tdTotal}>{report.totals.doses_given}</td>
+                      <td style={tdTotal}>{report.totals.cases_open ?? 0}</td>
+                    </>
+                  )}
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )
+      )}
+    </div>
+  );
 }
 
 export default function ReportsPage({ token }) {
@@ -137,6 +313,8 @@ export default function ReportsPage({ token }) {
           </div>
         )
       )}
+
+      <AggregateSection token={token} startDate={startDate} endDate={endDate} />
     </div>
   );
 }

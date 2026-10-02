@@ -55,7 +55,7 @@ export default function AccountSettingsPage({ token, currentUser, onProfileUpdat
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column", gap: 32 }}>
-            <button
+      <button
         onClick={onBack}
         style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, color: COLORS.primary, background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: -16, alignSelf: "flex-start" }}
       >

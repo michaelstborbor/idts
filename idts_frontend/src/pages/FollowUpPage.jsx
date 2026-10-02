@@ -1,6 +1,6 @@
 import React from "react";
 import { CheckCircle2 } from "lucide-react";
-import { CASE_STATUS_META, COLORS, PRIORITY_META } from "../constants.js";
+import { CASE_STATUS_META, COLORS, CONTENT_MAX_WIDTH, PRIORITY_META } from "../constants.js";
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 
@@ -11,7 +11,7 @@ export default function FollowUpPage({ cases, childrenById, loading, onOpenCase 
 
   if (sorted.length === 0) {
     return (
-      <div style={{ maxWidth: 640, margin: "0 auto", textAlign: "center", padding: "64px 0", borderRadius: 12, border: `1px solid ${COLORS.border}` }}>
+      <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto", textAlign: "center", padding: "64px 0", borderRadius: 12, border: `1px solid ${COLORS.border}` }}>
         <CheckCircle2 size={28} style={{ color: "#B8B2A5", margin: "0 auto" }} />
         <p style={{ marginTop: 12, fontWeight: 500, color: COLORS.ink }}>No active follow-up cases</p>
         <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 4 }}>
@@ -22,7 +22,7 @@ export default function FollowUpPage({ cases, childrenById, loading, onOpenCase 
   }
 
   return (
-    <div style={{ maxWidth: 640, margin: "0 auto", borderRadius: 12, border: `1px solid ${COLORS.border}`, overflow: "hidden", backgroundColor: COLORS.white }}>
+    <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto", borderRadius: 12, border: `1px solid ${COLORS.border}`, overflow: "hidden", backgroundColor: COLORS.white }}>
       {sorted.map((c, i) => {
         const child = childrenById[c.child_id];
         const meta = CASE_STATUS_META[c.status];

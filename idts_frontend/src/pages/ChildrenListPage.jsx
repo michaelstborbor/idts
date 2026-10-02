@@ -1,6 +1,6 @@
 import React from "react";
 import { ShieldCheck, Users } from "lucide-react";
-import { COLORS, ageLabel } from "../constants.js";
+import { COLORS, CONTENT_MAX_WIDTH, ageLabel } from "../constants.js";
 import { StatusBadge } from "../components/ui.jsx";
 
 export default function ChildrenListPage({ children, dueRowsByChildId, fullyImmunizedIds, loading, onOpenChild, onRegisterClick }) {
@@ -8,7 +8,7 @@ export default function ChildrenListPage({ children, dueRowsByChildId, fullyImmu
 
   if (children.length === 0) {
     return (
-      <div style={{ maxWidth: 640, margin: "0 auto", textAlign: "center", padding: "64px 0", borderRadius: 12, border: `1px solid ${COLORS.border}` }}>
+      <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto", textAlign: "center", padding: "64px 0", borderRadius: 12, border: `1px solid ${COLORS.border}` }}>
         <Users size={28} style={{ color: "#B8B2A5", margin: "0 auto" }} />
         <p style={{ marginTop: 12, fontWeight: 500, color: COLORS.ink }}>No children registered yet</p>
         <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 4, marginBottom: 20 }}>
@@ -25,7 +25,7 @@ export default function ChildrenListPage({ children, dueRowsByChildId, fullyImmu
   }
 
   return (
-    <div style={{ maxWidth: 640, margin: "0 auto", borderRadius: 12, border: `1px solid ${COLORS.border}`, overflow: "hidden", backgroundColor: COLORS.white }}>
+    <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto", borderRadius: 12, border: `1px solid ${COLORS.border}`, overflow: "hidden", backgroundColor: COLORS.white }}>
       {children.map((c, i) => {
         const next = dueRowsByChildId ? dueRowsByChildId[c.id] : null;
         const isFullyImmunized = fullyImmunizedIds && fullyImmunizedIds.has(c.id);
