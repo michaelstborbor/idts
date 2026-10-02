@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
-import { COLORS, PRIORITY_META } from "../constants.js";
+import { COLORS, CONTENT_MAX_WIDTH, PRIORITY_META } from "../constants.js";
 import { StatusBadge } from "../components/ui.jsx";
 
 const FILTERS = [
@@ -25,7 +25,7 @@ export default function DueDefaulterListPage({ dueRows, activeCasesByKey, loadin
   if (loading) return <p style={{ textAlign: "center", color: COLORS.muted }}>Loading…</p>;
 
   return (
-    <div style={{ maxWidth: 640, margin: "0 auto" }}>
+    <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto" }}>
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         {FILTERS.map((t) => (
           <button

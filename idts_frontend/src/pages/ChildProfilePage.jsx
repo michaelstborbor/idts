@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { ChevronLeft, History, Pencil, ShieldCheck, Syringe, Trash2 } from "lucide-react";
 import { api } from "../api/client.js";
-import { COLORS, ageLabel, fmtDate } from "../constants.js";
+import { COLORS, CONTENT_MAX_WIDTH, ageLabel, fmtDate } from "../constants.js";
 import { Modal, PrimaryButton, SecondaryButton, StatusBadge } from "../components/ui.jsx";
 import VaccinationModal from "../components/VaccinationModal.jsx";
 
@@ -52,7 +52,7 @@ export default function ChildProfilePage({ token, childId, facilities, onBack, o
   if (!child) return null;
 
   return (
-    <div style={{ maxWidth: 640, margin: "0 auto" }}>
+    <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto" }}>
       <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, color: COLORS.primary, background: "none", border: "none", cursor: "pointer", marginBottom: 20, padding: 0 }}>
         <ChevronLeft size={16} /> All children
       </button>

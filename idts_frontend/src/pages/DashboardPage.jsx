@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ShieldCheck, Users } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "../api/client.js";
-import { COLORS, STATUS_META } from "../constants.js";
+import { COLORS, CONTENT_MAX_WIDTH, STATUS_META } from "../constants.js";
 
 const STATUS_ORDER = ["not_yet_due", "due_soon", "due", "overdue", "defaulter", "administered", "not_applicable"];
 
@@ -53,7 +53,7 @@ export default function DashboardPage({ token, childrenCount }) {
 
   if (childrenCount === 0 || !stats) {
     return (
-      <div style={{ maxWidth: 640, margin: "0 auto", textAlign: "center", padding: "64px 0", borderRadius: 12, border: `1px solid ${COLORS.border}` }}>
+      <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto", textAlign: "center", padding: "64px 0", borderRadius: 12, border: `1px solid ${COLORS.border}` }}>
         <Users size={28} style={{ color: "#B8B2A5", margin: "0 auto" }} />
         <p style={{ marginTop: 12, fontWeight: 500, color: COLORS.ink }}>Nothing to show yet</p>
         <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 4 }}>Register a few children to see the dashboard fill in.</p>
@@ -61,22 +61,14 @@ export default function DashboardPage({ token, childrenCount }) {
     );
   }
 
-  const chartData = [
-    ...STATUS_ORDER.filter((s) => stats.dose_status_counts[s] > 0).map((s) => ({
-      status: s,
-      label: STATUS_META[s].label,
-      count: stats.dose_status_counts[s],
-    })),
-    { status: "fully_immunized", label: "Fully immunized (FIC)", count: stats.fully_immunized },
-  ];
+  const chartData = STATUS_ORDER.filter((s) => stats.dose_status_counts[s] > 0).map((s) => ({
+    status: s,
+    label: STATUS_META[s].label,
+    count: stats.dose_status_counts[s],
+  }));
 
   return (
-    <div style={{ maxWidth: 640, margin: "0 auto" }}>
-      {stats.scope_label && (
-        <p style={{ fontSize: 13, color: COLORS.muted, margin: "0 0 12px" }}>
-          Showing data for: <strong style={{ color: COLORS.ink }}>{stats.scope_label}</strong>
-        </p>
-      )}
+    <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto" }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginBottom: 24 }}>
         <SummaryCard label="Children registered" value={stats.registered} />
         <FullyImmunizedCard value={stats.fully_immunized} />
@@ -87,7 +79,7 @@ export default function DashboardPage({ token, childrenCount }) {
       </div>
 
       <h3 style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6B6660", marginBottom: 12 }}>
-        All scheduled doses, by status (Fully immunized = number of children)
+        All scheduled doses, by status
       </h3>
       <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, padding: 16, backgroundColor: COLORS.white }}>
         {chartData.length === 0 ? (
@@ -96,11 +88,11 @@ export default function DashboardPage({ token, childrenCount }) {
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={chartData} margin={{ top: 8, right: 12, left: -12, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6B6660" }} interval={0} angle={-20} textAnchor="end" height={70} />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6B6660" }} interval={0} angle={-20} textAnchor="end" height={55} />
               <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#6B6660" }} />
               <Tooltip cursor={{ fill: COLORS.subtleBg }} contentStyle={{ borderRadius: 8, borderColor: COLORS.border, fontSize: 13 }} />
               <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                {chartData.map((d) => <Cell key={d.status} fill={d.status === "fully_immunized" ? "#1B4D3E" : STATUS_META[d.status].color} />)}
+                {chartData.map((d) => <Cell key={d.status} fill={STATUS_META[d.status].color} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
