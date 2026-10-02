@@ -48,6 +48,7 @@ export default function App() {
   const [assignTarget, setAssignTarget] = useState(null);
   const [caseModalTarget, setCaseModalTarget] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [viewBeforeAccount, setViewBeforeAccount] = useState("dashboard");
 
   // On load, if a token is already stored, verify it's still valid.
   useEffect(() => {
@@ -196,7 +197,7 @@ export default function App() {
                           <FileText size={15} /> Reports
                         </button>
                         <button
-                          onClick={() => { setView("account"); setMenuOpen(false); }}
+                          onClick={() => { if (view !== "account") setViewBeforeAccount(view); setView("account"); setMenuOpen(false); }}
                           className="menu-item"
                           style={{ width: "100%", textAlign: "left", padding: "11px 16px", fontSize: 14, color: COLORS.ink, backgroundColor: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, borderTop: `1px solid ${COLORS.border}` }}
                         >
@@ -290,12 +291,13 @@ export default function App() {
         ) : view === "reports" ? (
           <ReportsPage token={token} />
         ) : view === "admin" && isAdmin ? (
-          <AdminPage token={token} facilities={facilities} />
+          <AdminPage token={token} facilities={facilities} currentUserId={currentUser.id} />
         ) : view === "account" ? (
           <AccountSettingsPage
             token={token}
             currentUser={currentUser}
             onProfileUpdated={(updated) => setCurrentUser(updated)}
+            onBack={() => setView(viewBeforeAccount)}
           />
         ) : view === "dashboard" ? (
           <DashboardPage token={token} childrenCount={children.length} />
