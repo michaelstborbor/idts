@@ -17,6 +17,7 @@ class UserOut(BaseModel):
     username: str
     role: str
     facility_id: Optional[uuid.UUID] = None
+    geographic_area_id: Optional[uuid.UUID] = None
     is_active: bool = True
 
 
