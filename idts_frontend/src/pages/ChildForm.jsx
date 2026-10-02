@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { api } from "../api/client.js";
-import { COLORS } from "../constants.js";
+import { COLORS, facilityOptionLabel, groupFacilitiesByDistrict } from "../constants.js";
 import { ErrorText, Label, PrimaryButton, SecondaryButton, SelectInput, TextInput } from "../components/ui.jsx";
 
 /**
@@ -99,7 +99,7 @@ export default function ChildForm({ token, facilities, mode = "create", initialC
           />
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div className="responsive-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <div>
             <Label>Sex</Label>
             <div style={{ display: "flex", borderRadius: 8, border: `1px solid ${COLORS.inputBorder}`, overflow: "hidden" }}>
@@ -134,7 +134,11 @@ export default function ChildForm({ token, facilities, mode = "create", initialC
           <div>
             <Label>Facility</Label>
             <SelectInput value={facilityId} onChange={(e) => setFacilityId(e.target.value)}>
-              {facilities.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+              {groupFacilitiesByDistrict(facilities).map(([district, facs]) => (
+                <optgroup key={district} label={district}>
+                  {facs.map((f) => <option key={f.id} value={f.id}>{facilityOptionLabel(f)}</option>)}
+                </optgroup>
+              ))}
             </SelectInput>
           </div>
         )}
@@ -144,7 +148,7 @@ export default function ChildForm({ token, facilities, mode = "create", initialC
           <TextInput value={address} onChange={(e) => setAddress(e.target.value)} placeholder="e.g. 12 Sandor Road, Koidu Town" />
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div className="responsive-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <div>
             <Label>Caregiver name</Label>
             <TextInput value={caregiverName} onChange={(e) => setCaregiverName(e.target.value)} placeholder="e.g. Mariama Kamara" />

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { KeyRound, Trash2, UserPlus, UserX, UserCheck } from "lucide-react";
 import { api } from "../api/client.js";
-import { COLORS, CONTENT_MAX_WIDTH } from "../constants.js";
+import { COLORS, CONTENT_MAX_WIDTH, facilityOptionLabel, groupFacilitiesByDistrict } from "../constants.js";
 import { ErrorText, Label, Modal, Pill, PrimaryButton, SecondaryButton, SelectInput, TextInput } from "../components/ui.jsx";
 
 const ROLE_LABELS = {
@@ -91,7 +91,11 @@ function CreateUserModal({ token, facilities, districts, onCreated, onClose }) {
             <Label>Facility</Label>
             <SelectInput value={facilityId} onChange={(e) => setFacilityId(e.target.value)}>
               <option value="">Select a facility…</option>
-              {facilities.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+              {groupFacilitiesByDistrict(facilities).map(([district, facs]) => (
+                <optgroup key={district} label={district}>
+                  {facs.map((f) => <option key={f.id} value={f.id}>{facilityOptionLabel(f)}</option>)}
+                </optgroup>
+              ))}
             </SelectInput>
           </div>
         )}
@@ -240,7 +244,10 @@ export default function AdminPage({ token, facilities, currentUserId }) {
     }
   }
 
-  const facilityName = (id) => facilities.find((f) => f.id === id)?.name;
+  const facilityName = (id) => {
+    const f = facilities.find((fac) => fac.id === id);
+    return f ? facilityOptionLabel(f) : undefined;
+  };
   const districtName = (id) => districts.find((d) => d.id === id)?.name;
 
   return (
