@@ -142,7 +142,10 @@ export const api = {
 
   getDashboardStats: (token, facilityId) =>
     request("/api/v1/dashboard", { token, params: { facility_id: facilityId } }),
-
+  getReportScope: (token) => request("/api/v1/reports/scope", { token }),
+  getAggregateReport: (token, { groupBy, startDate, endDate } = {}) =>
+    request(`/api/v1/reports/aggregate?group_by=${groupBy}${startDate ? `&start_date=${startDate}` : ""}${endDate ? `&end_date=${endDate}` : ""}`, { token }),
+  listDistricts: (token) => request("/api/v1/facilities/districts", { token }),
   getVaccinationsSummary: (token, { startDate, endDate, facilityId } = {}) =>
     request("/api/v1/reports/vaccinations-summary", {
       token, params: { start_date: startDate, end_date: endDate, facility_id: facilityId },
