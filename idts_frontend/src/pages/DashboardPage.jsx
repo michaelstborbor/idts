@@ -72,6 +72,11 @@ export default function DashboardPage({ token, childrenCount }) {
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto" }}>
+      {stats.scope_label && (
+        <p style={{ fontSize: 13, color: COLORS.muted, margin: "0 0 12px" }}>
+          Showing data for: <strong style={{ color: COLORS.ink }}>{stats.scope_label}</strong>
+        </p>
+      )}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginBottom: 24 }}>
         <SummaryCard label="Children registered" value={stats.registered} />
         <FullyImmunizedCard value={stats.fully_immunized} />

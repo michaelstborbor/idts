@@ -11,16 +11,28 @@ const ROLE_LABELS = {
   chw: "Community Health Worker",
   facility_supervisor: "Facility Supervisor",
   district_manager: "District Manager",
-  national_user: "National Programme User",
+  national_user: "National Supervisor",
 };
 const ROLES = Object.keys(ROLE_LABELS);
+// Who needs what: facility-level accounts see one facility, district managers one district.
+const FACILITY_ROLES = ["facility_focal_person", "vaccinator", "chw", "facility_supervisor"];
+const ACCESS_HINTS = {
+  facility_focal_person: "Sees only their own facility's data.",
+  vaccinator: "Sees only their own facility's data.",
+  chw: "Sees only their own facility's data.",
+  facility_supervisor: "Sees only their own facility's data.",
+  district_manager: "Sees all facilities in the chosen district, with reports by facility, user and chiefdom.",
+  national_user: "Sees all facilities in the country, with reports by district, facility and user.",
+  system_admin: "Sees everything and manages user accounts.",
+};
 
-function CreateUserModal({ token, facilities, onCreated, onClose }) {
+function CreateUserModal({ token, facilities, districts, onCreated, onClose }) {
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("chw");
-  const [facilityId, setFacilityId] = useState(facilities[0]?.id || "");
+  const [facilityId, setFacilityId] = useState("");
+  const [districtId, setDistrictId] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -28,6 +40,8 @@ function CreateUserModal({ token, facilities, onCreated, onClose }) {
     if (!fullName.trim()) return setError("Enter the user's full name.");
     if (username.trim().length < 3) return setError("Username must be at least 3 characters.");
     if (password.length < 8) return setError("Password must be at least 8 characters.");
+    if (FACILITY_ROLES.includes(role) && !facilityId) return setError("Choose the facility this account belongs to.");
+    if (role === "district_manager" && !districtId) return setError("Choose the district this account manages.");
     setError("");
     setSubmitting(true);
     try {
@@ -36,7 +50,8 @@ function CreateUserModal({ token, facilities, onCreated, onClose }) {
         username: username.trim(),
         password,
         role,
-        facility_id: facilityId || null,
+        facility_id: FACILITY_ROLES.includes(role) ? facilityId : null,
+        geographic_area_id: role === "district_manager" ? districtId : null,
       });
       onCreated(user);
     } catch (err) {
@@ -70,13 +85,25 @@ function CreateUserModal({ token, facilities, onCreated, onClose }) {
             {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
           </SelectInput>
         </div>
-        <div>
-          <Label>Facility <span style={{ color: COLORS.muted, fontWeight: 400 }}>(optional)</span></Label>
-          <SelectInput value={facilityId} onChange={(e) => setFacilityId(e.target.value)}>
-            <option value="">No facility assigned</option>
-            {facilities.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-          </SelectInput>
-        </div>
+        <p style={{ fontSize: 12, color: COLORS.muted, margin: "-8px 0 0" }}>{ACCESS_HINTS[role]}</p>
+        {FACILITY_ROLES.includes(role) && (
+          <div>
+            <Label>Facility</Label>
+            <SelectInput value={facilityId} onChange={(e) => setFacilityId(e.target.value)}>
+              <option value="">Select a facility…</option>
+              {facilities.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </SelectInput>
+          </div>
+        )}
+        {role === "district_manager" && (
+          <div>
+            <Label>District</Label>
+            <SelectInput value={districtId} onChange={(e) => setDistrictId(e.target.value)}>
+              <option value="">Select a district…</option>
+              {districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </SelectInput>
+          </div>
+        )}
 
         <ErrorText>{error}</ErrorText>
 
@@ -166,6 +193,7 @@ export default function AdminPage({ token, facilities, currentUserId }) {
   const [togglingId, setTogglingId] = useState(null);
   const [removingId, setRemovingId] = useState(null);
   const [resetTarget, setResetTarget] = useState(null);
+  const [districts, setDistricts] = useState([]);
 
   async function load() {
     setLoading(true);
@@ -181,6 +209,7 @@ export default function AdminPage({ token, facilities, currentUserId }) {
   }
 
   useEffect(() => { load(); }, [token]);
+  useEffect(() => { api.listDistricts(token).then(setDistricts).catch(() => {}); }, [token]);
 
   async function toggleActive(user) {
     setTogglingId(user.id);
@@ -212,6 +241,7 @@ export default function AdminPage({ token, facilities, currentUserId }) {
   }
 
   const facilityName = (id) => facilities.find((f) => f.id === id)?.name;
+  const districtName = (id) => districts.find((d) => d.id === id)?.name;
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto" }}>
@@ -248,6 +278,7 @@ export default function AdminPage({ token, facilities, currentUserId }) {
                 <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 2 }}>
                   {ROLE_LABELS[u.role] || u.role}
                   {u.facility_id ? ` · ${facilityName(u.facility_id) || "Unknown facility"}` : ""}
+                  {u.geographic_area_id ? ` · ${districtName(u.geographic_area_id) || "Unknown district"}` : ""}
                   {!u.is_active ? " · Deactivated" : ""}
                 </p>
               </div>
@@ -300,6 +331,7 @@ export default function AdminPage({ token, facilities, currentUserId }) {
         <CreateUserModal
           token={token}
           facilities={facilities}
+          districts={districts}
           onCreated={() => { setShowCreate(false); load(); }}
           onClose={() => setShowCreate(false)}
         />
