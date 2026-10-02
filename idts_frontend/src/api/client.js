@@ -107,14 +107,15 @@ export const api = {
   createUser: (token, payload) => request("/api/v1/users", { method: "POST", token, body: payload }),
   updateUser: (token, userId, payload) =>
     request(`/api/v1/users/${userId}`, { method: "PATCH", token, body: payload }),
-    deleteUser: (token, userId) =>
+  deleteUser: (token, userId) =>
     request(`/api/v1/users/${userId}`, { method: "DELETE", token }),
-    resetUserPassword: (token, userId, newPassword) =>
+  resetUserPassword: (token, userId, newPassword) =>
     request(`/api/v1/users/${userId}/reset-password`, { method: "POST", token, body: { new_password: newPassword } }),
   createChw: (token, fullName, facilityId) =>
     request("/api/v1/users/chw", { method: "POST", token, body: { full_name: fullName, facility_id: facilityId } }),
 
   listFacilities: (token) => request("/api/v1/facilities", { token }),
+  listDistricts: (token) => request("/api/v1/facilities/districts", { token }),
 
   listChildren: (token, facilityId) => request("/api/v1/children", { token, params: { facility_id: facilityId } }),
   getChild: (token, childId) => request(`/api/v1/children/${childId}`, { token }),
@@ -142,10 +143,10 @@ export const api = {
 
   getDashboardStats: (token, facilityId) =>
     request("/api/v1/dashboard", { token, params: { facility_id: facilityId } }),
+
   getReportScope: (token) => request("/api/v1/reports/scope", { token }),
   getAggregateReport: (token, { groupBy, startDate, endDate } = {}) =>
     request(`/api/v1/reports/aggregate?group_by=${groupBy}${startDate ? `&start_date=${startDate}` : ""}${endDate ? `&end_date=${endDate}` : ""}`, { token }),
-  listDistricts: (token) => request("/api/v1/facilities/districts", { token }),
   getVaccinationsSummary: (token, { startDate, endDate, facilityId } = {}) =>
     request("/api/v1/reports/vaccinations-summary", {
       token, params: { start_date: startDate, end_date: endDate, facility_id: facilityId },
