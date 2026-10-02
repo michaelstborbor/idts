@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Settings, UserPlus } from "lucide-react";
+import { FileText, LogOut, Menu as MenuIcon, Settings, UserPlus } from "lucide-react";
 import { api, getStoredToken, setStoredToken } from "./api/client.js";
-import { COLORS } from "./constants.js";
+import { COLORS, CONTENT_MAX_WIDTH } from "./constants.js";
 import LoginPage from "./pages/LoginPage.jsx";
 import ChildForm from "./pages/ChildForm.jsx";
 import ChildrenListPage from "./pages/ChildrenListPage.jsx";
@@ -43,11 +43,11 @@ export default function App() {
   const [dataError, setDataError] = useState("");
 
   const [view, setView] = useState("dashboard");
-  const [viewBeforeAccount, setViewBeforeAccount] = useState("dashboard");
   const [activeChildId, setActiveChildId] = useState(null);
   const [editingChild, setEditingChild] = useState(null);
   const [assignTarget, setAssignTarget] = useState(null);
   const [caseModalTarget, setCaseModalTarget] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // On load, if a token is already stored, verify it's still valid.
   useEffect(() => {
@@ -146,7 +146,7 @@ export default function App() {
   return (
     <div style={{ backgroundColor: COLORS.bg, minHeight: "100vh", fontFamily: "'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif" }}>
       <div style={{ padding: "20px 20px 0" }} className="app-header-pad">
-        <div style={{ maxWidth: 760, margin: "0 auto 28px" }}>
+        <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto 28px" }}>
           <div className="app-header-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
             <div>
               <p style={{ fontSize: 12, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", color: COLORS.primary, marginBottom: 4 }}>
@@ -164,24 +164,55 @@ export default function App() {
                 {showRegisterButton && (
                   <button
                     onClick={() => setView("register")}
+                    className="icon-btn"
                     style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 8, fontSize: 14, fontWeight: 500, color: "#fff", backgroundColor: COLORS.primary, border: "none", cursor: "pointer" }}
                   >
                     <UserPlus size={16} /> Register child
                   </button>
                 )}
-                <button
-                  onClick={() => { if (view !== "account") setViewBeforeAccount(view); setView("account"); }}
-                  title="Account settings"
-                  style={{ padding: 10, borderRadius: 8, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer", display: "flex" }}
-                >
-                  <Settings size={16} />
-                </button>
-                <button
-                  onClick={handleLogout}
-                  style={{ padding: "10px 14px", borderRadius: 8, fontSize: 14, fontWeight: 500, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer" }}
-                >
-                  Sign out
-                </button>
+                <div style={{ position: "relative" }}>
+                  <button
+                    onClick={() => setMenuOpen((open) => !open)}
+                    title="Menu"
+                    className="icon-btn"
+                    style={{ padding: 10, borderRadius: 8, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer", display: "flex" }}
+                  >
+                    <MenuIcon size={16} />
+                  </button>
+                  {menuOpen && (
+                    <>
+                      {/* Invisible full-screen layer: clicking anywhere outside the
+                          menu closes it. Sits below the menu itself (lower z-index). */}
+                      <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />
+                      <div
+                        className="menu-dropdown"
+                        style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, minWidth: 190, backgroundColor: COLORS.white, border: `1px solid ${COLORS.border}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", overflow: "hidden", zIndex: 21 }}
+                      >
+                        <button
+                          onClick={() => { setView("reports"); setMenuOpen(false); }}
+                          className="menu-item"
+                          style={{ width: "100%", textAlign: "left", padding: "11px 16px", fontSize: 14, color: COLORS.ink, backgroundColor: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}
+                        >
+                          <FileText size={15} /> Reports
+                        </button>
+                        <button
+                          onClick={() => { setView("account"); setMenuOpen(false); }}
+                          className="menu-item"
+                          style={{ width: "100%", textAlign: "left", padding: "11px 16px", fontSize: 14, color: COLORS.ink, backgroundColor: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, borderTop: `1px solid ${COLORS.border}` }}
+                        >
+                          <Settings size={15} /> Settings
+                        </button>
+                        <button
+                          onClick={() => { setMenuOpen(false); handleLogout(); }}
+                          className="menu-item"
+                          style={{ width: "100%", textAlign: "left", padding: "11px 16px", fontSize: 14, color: "#8C2E1C", backgroundColor: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, borderTop: `1px solid ${COLORS.border}` }}
+                        >
+                          <LogOut size={15} /> Logout
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -193,15 +224,16 @@ export default function App() {
           )}
 
           {showTabBar && (
-            <div style={{ display: "flex", gap: 4, marginTop: 20, padding: 4, borderRadius: 8, backgroundColor: COLORS.chipBg, width: "fit-content", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 4, marginTop: 20, padding: 6, borderRadius: 10, backgroundColor: COLORS.primary, width: "fit-content", maxWidth: "100%", flexWrap: "wrap", boxShadow: "0 1px 3px rgba(0,0,0,0.12)" }}>
               {navTabs.map((t) => (
                 <button
                   key={t.value}
                   onClick={() => setView(t.value)}
+                  className={`nav-tab${view === t.value ? " active" : ""}`}
                   style={{
-                    padding: "6px 14px", borderRadius: 6, fontSize: 14, fontWeight: 500, border: "none", cursor: "pointer",
+                    padding: "7px 16px", borderRadius: 7, fontSize: 14, fontWeight: 500, border: "none", cursor: "pointer",
                     backgroundColor: view === t.value ? COLORS.white : "transparent",
-                    color: view === t.value ? COLORS.primary : "#6B6660",
+                    color: view === t.value ? COLORS.primary : "rgba(255,255,255,0.85)",
                   }}
                 >
                   {t.label}{t.value === "followup" && activeCaseCount > 0 ? ` (${activeCaseCount})` : ""}
@@ -258,13 +290,12 @@ export default function App() {
         ) : view === "reports" ? (
           <ReportsPage token={token} />
         ) : view === "admin" && isAdmin ? (
-            <AdminPage token={token} facilities={facilities} currentUserId={currentUser.id} />
+          <AdminPage token={token} facilities={facilities} />
         ) : view === "account" ? (
           <AccountSettingsPage
             token={token}
             currentUser={currentUser}
             onProfileUpdated={(updated) => setCurrentUser(updated)}
-            onBack={() => setView(viewBeforeAccount)}
           />
         ) : view === "dashboard" ? (
           <DashboardPage token={token} childrenCount={children.length} />

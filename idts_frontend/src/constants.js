@@ -12,6 +12,11 @@ export const COLORS = {
   chipBg: "#EFEBE3",
 };
 
+// Shared content width: wide enough to use up a tablet/desktop screen
+// instead of a narrow centered column, capped so text/tables stay readable
+// on very wide monitors.
+export const CONTENT_MAX_WIDTH = 1180;
+
 export const STATUS_META = {
   not_yet_due: { label: "Not yet due", color: "#8A8478", bg: "#F1EFEA", icon: Clock },
   due_soon: { label: "Due soon", color: "#8A6A1F", bg: "#FBF1DC", icon: Clock },
