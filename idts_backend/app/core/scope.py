@@ -6,18 +6,23 @@ defaulter cases and vaccinations can never disagree with each other.
 
 Levels (derived from the user's role):
   facility  -> facility_focal_person, vaccinator, chw, facility_supervisor
-               see ONLY their own facility (User.facility_id)
-  district  -> district_manager sees every facility located anywhere under
-               their assigned area (User.geographic_area_id, normally a
-               district). Works for any number of districts: add another
-               district + its facilities, assign a district_manager to it,
-               and nothing here changes.
-  national  -> national_user sees all facilities in the country
-  admin     -> system_admin sees everything, across every country/district
-               present in the database
+               see ONLY their own facility (User.facility_id) everywhere
+               EXCEPT the report builder, which gives facility_supervisor
+               and facility_focal_person their whole CHIEFDOM (see
+               report_scope_facility_ids below) — vaccinator and chw get
+               no report access at all, enforced separately.
+  district  -> district_manager sees every facility under their assigned
+               area (User.geographic_area_id = a district)
+  national  -> national_user sees every facility under their assigned
+               COUNTRY (User.geographic_area_id = a country) — so a
+               second country's facilities stay invisible to them
+  admin     -> system_admin sees everything, across every country
 
-"Fails closed": a facility-level user with no facility, or a district
-manager with no district, sees NOTHING rather than everything.
+Works for any number of countries/districts: add more geography +
+facilities, assign accounts to the right area, and nothing here changes.
+
+"Fails closed": an account with no area/facility assigned sees NOTHING
+rather than everything.
 """
 
 import uuid
@@ -34,7 +39,10 @@ LEVEL_DISTRICT = "district"
 LEVEL_NATIONAL = "national"
 LEVEL_ADMIN = "admin"
 
-# Which report breakdowns each level may request
+REPORT_ROLES = {"system_admin", "national_user", "district_manager", "facility_supervisor", "facility_focal_person"}
+NO_REPORT_ACCESS_ROLES = {"vaccinator", "chw"}
+
+# Which report breakdowns each level may request in the Aggregate report
 LEVEL_GROUPINGS = {
     LEVEL_FACILITY: ["facility", "user"],
     LEVEL_DISTRICT: ["facility", "user", "chiefdom"],
@@ -53,6 +61,13 @@ def access_level(user: User) -> str:
     return LEVEL_FACILITY
 
 
+def can_access_reports(user: User) -> bool:
+    """Vaccinator and CHW get no report access at all — not a narrowed
+    scope, no access. Enforced here so it can't be bypassed by calling the
+    API directly, not just by hiding the Reports tab."""
+    return user.role not in NO_REPORT_ACCESS_ROLES
+
+
 def _descendant_area_ids(db: Session, root_id: uuid.UUID) -> set:
     rows = db.query(GeographicArea.id, GeographicArea.parent_id).all()
     children_of: dict = {}
@@ -69,18 +84,72 @@ def _descendant_area_ids(db: Session, root_id: uuid.UUID) -> set:
     return found
 
 
+def facility_ids_under_area(db: Session, area_id: uuid.UUID) -> list:
+    area_ids = _descendant_area_ids(db, area_id)
+    rows = db.query(Facility.id).filter(Facility.geographic_area_id.in_(area_ids)).all()
+    return [r[0] for r in rows]
+
+
 def accessible_facility_ids(db: Session, user: User) -> Optional[list]:
-    """None means 'no restriction'. An empty list means 'nothing'."""
+    """None means 'no restriction'. An empty list means 'nothing'. This is
+    the EVERYDAY scope — Dashboard, Children, due-list, defaulter cases,
+    vaccinations. Facility-level roles always get just their own facility
+    here, regardless of role (that broadens only for reports — see
+    report_scope_facility_ids)."""
     level = access_level(user)
-    if level in (LEVEL_ADMIN, LEVEL_NATIONAL):
+    if level == LEVEL_ADMIN:
         return None
+    if level == LEVEL_NATIONAL:
+        return [] if not user.geographic_area_id else facility_ids_under_area(db, user.geographic_area_id)
     if level == LEVEL_DISTRICT:
-        if not user.geographic_area_id:
-            return []
-        area_ids = _descendant_area_ids(db, user.geographic_area_id)
-        rows = db.query(Facility.id).filter(Facility.geographic_area_id.in_(area_ids)).all()
-        return [r[0] for r in rows]
+        return [] if not user.geographic_area_id else facility_ids_under_area(db, user.geographic_area_id)
     return [user.facility_id] if user.facility_id else []
+
+
+def report_scope_facility_ids(db: Session, user: User) -> Optional[list]:
+    """
+    Scope for the REPORT BUILDER specifically. Same as
+    accessible_facility_ids() for admin/national/district. Different only
+    for facility_supervisor and facility_focal_person, who may report on
+    any facility in their own CHIEFDOM (not just their own facility) —
+    per the access rules given when this report builder was specified.
+    Call can_access_reports() first; this assumes the caller already has
+    report access.
+    """
+    if user.role in ("facility_supervisor", "facility_focal_person"):
+        if not user.facility_id:
+            return []
+        facility = db.query(Facility).filter(Facility.id == user.facility_id).first()
+        if facility is None or facility.geographic_area_id is None:
+            return []
+        return facility_ids_under_area(db, facility.geographic_area_id)
+    return accessible_facility_ids(db, user)
+
+
+def report_root_area(db: Session, user: User) -> Optional[GeographicArea]:
+    """
+    The GeographicArea the report builder's Organizational Unit tree is
+    rooted at for this user — i.e. the highest level they're allowed to
+    pick. None for system_admin (every country is a root). None for
+    everyone else means "not assigned — sees nothing" (fails closed).
+    For facility_supervisor/facility_focal_person, the root is their own
+    CHIEFDOM (matches report_scope_facility_ids above); for vaccinator/chw
+    this is never called (no report access at all).
+    """
+    if user.role == "system_admin":
+        return None
+    if user.role in ("national_user", "district_manager"):
+        if not user.geographic_area_id:
+            return None
+        return db.query(GeographicArea).filter(GeographicArea.id == user.geographic_area_id).first()
+    if user.role in ("facility_supervisor", "facility_focal_person"):
+        if not user.facility_id:
+            return None
+        facility = db.query(Facility).filter(Facility.id == user.facility_id).first()
+        if facility is None or facility.geographic_area_id is None:
+            return None
+        return db.query(GeographicArea).filter(GeographicArea.id == facility.geographic_area_id).first()
+    return None
 
 
 def resolve_facility_scope(db: Session, user: User, requested_facility_id: Optional[uuid.UUID] = None) -> Optional[list]:
@@ -122,13 +191,11 @@ def scope_label(db: Session, user: User) -> str:
     level = access_level(user)
     if level == LEVEL_ADMIN:
         return "All data (system-wide)"
-    if level == LEVEL_NATIONAL:
-        return "All facilities (national)"
-    if level == LEVEL_DISTRICT:
+    if level in (LEVEL_NATIONAL, LEVEL_DISTRICT):
         if not user.geographic_area_id:
-            return "No district assigned"
+            return "No area assigned"
         area = db.query(GeographicArea).filter(GeographicArea.id == user.geographic_area_id).first()
-        return area.name if area else "No district assigned"
+        return area.name if area else "No area assigned"
     if not user.facility_id:
         return "No facility assigned"
     facility = db.query(Facility).filter(Facility.id == user.facility_id).first()
