@@ -128,7 +128,13 @@ export default function App() {
   }
 
   const isAdmin = currentUser.role === "system_admin";
-  const navTabs = isAdmin ? [...BASE_NAV_TABS, { value: "admin", label: "Admin" }] : BASE_NAV_TABS;
+  // Vaccinator and CHW get no Reports access at all (also enforced on the
+  // backend — see app/core/scope.py REPORT_ROLES) — not hidden, removed.
+  const canSeeReports = currentUser.role !== "vaccinator" && currentUser.role !== "chw";
+  const navTabs = [
+    ...BASE_NAV_TABS.filter((t) => t.value !== "reports" || canSeeReports),
+    ...(isAdmin ? [{ value: "admin", label: "Admin" }] : []),
+  ];
   const showTabBar = TAB_BAR_VIEWS.includes(view);
   const showRegisterButton = REGISTER_BUTTON_VIEWS.includes(view);
 
@@ -189,13 +195,15 @@ export default function App() {
                         className="menu-dropdown"
                         style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, minWidth: 190, backgroundColor: COLORS.white, border: `1px solid ${COLORS.border}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", overflow: "hidden", zIndex: 21 }}
                       >
-                        <button
-                          onClick={() => { setView("reports"); setMenuOpen(false); }}
-                          className="menu-item"
-                          style={{ width: "100%", textAlign: "left", padding: "11px 16px", fontSize: 14, color: COLORS.ink, backgroundColor: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}
-                        >
-                          <FileText size={15} /> Reports
-                        </button>
+                        {canSeeReports && (
+                          <button
+                            onClick={() => { setView("reports"); setMenuOpen(false); }}
+                            className="menu-item"
+                            style={{ width: "100%", textAlign: "left", padding: "11px 16px", fontSize: 14, color: COLORS.ink, backgroundColor: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}
+                          >
+                            <FileText size={15} /> Reports
+                          </button>
+                        )}
                         <button
                           onClick={() => { if (view !== "account") setViewBeforeAccount(view); setView("account"); setMenuOpen(false); }}
                           className="menu-item"
@@ -289,7 +297,7 @@ export default function App() {
             onOpenCase={(child, defaulterCase) => setCaseModalTarget({ child, case: defaulterCase })}
           />
         ) : view === "reports" ? (
-          <ReportsPage token={token} />
+          <ReportsPage token={token} currentUser={currentUser} />
         ) : view === "admin" && isAdmin ? (
           <AdminPage token={token} facilities={facilities} currentUserId={currentUser.id} />
         ) : view === "account" ? (
