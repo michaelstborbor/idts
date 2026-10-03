@@ -203,7 +203,309 @@ function AggregateSection({ token, startDate, endDate }) {
   );
 }
 
-export default function ReportsPage({ token }) {
+// ---------------------------------------------------------------------------
+// New 3-step report: Organizational Unit -> Data (vaccines) -> Period.
+// A separate, additional report from the Aggregate report above — this one
+// always returns ONE set of totals for ONE chosen unit (a country, district,
+// chiefdom or facility), with a per-vaccine dose breakdown.
+// ---------------------------------------------------------------------------
+
+const LEVEL_LABELS = { country: "Country", district: "District", chiefdom: "Chiefdom", facility: "Facility" };
+
+function OrgUnitPicker({ token, role, onChange }) {
+  // What this role's cascade needs. Mirrors Admin > Create user's logic:
+  // facility_supervisor/facility_focal_person just pick ONE facility, from
+  // the list of facilities in their own chiefdom (fetched directly, no
+  // country/district/chiefdom steps needed since that chiefdom is fixed).
+  const needsFullPicker = ["system_admin", "national_user", "district_manager"].includes(role);
+  const needsCountry = role === "system_admin";
+  const needsDistrict = role === "system_admin" || role === "national_user";
+  const needsChiefdom = needsFullPicker;
+
+  const [countries, setCountries] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [chiefdoms, setChiefdoms] = useState([]);
+  const [facilities, setFacilities] = useState([]);
+
+  const [countryId, setCountryId] = useState("");
+  const [districtId, setDistrictId] = useState("");
+  const [chiefdomId, setChiefdomId] = useState("");
+  const [facilityId, setFacilityId] = useState("");
+
+  // Facility-level roles: just fetch their chiefdom's facility list once.
+  useEffect(() => {
+    if (needsFullPicker) return;
+    api.listFacilities(token, { forReports: true }).then(setFacilities).catch(() => {});
+  }, [needsFullPicker, token]);
+
+  // Admin / National Supervisor / District Manager: full cascade.
+  useEffect(() => {
+    if (!needsCountry) return;
+    api.listCountries(token).then((list) => {
+      setCountries(list);
+      if (list.length === 1) setCountryId(list[0].id);
+    }).catch(() => {});
+  }, [needsCountry, token]);
+
+  useEffect(() => {
+    if (!needsFullPicker) return;
+    if (role === "national_user" || role === "district_manager") {
+      // Their own country/district is fixed — ask the backend directly,
+      // it already returns just the one they're assigned to.
+      if (role === "national_user") {
+        api.listCountries(token).then((list) => { if (list[0]) setCountryId(list[0].id); }).catch(() => {});
+      }
+      api.listDistricts(token).then((list) => {
+        setDistricts(list);
+        if (list.length === 1) setDistrictId(list[0].id);
+      }).catch(() => {});
+    } else if (countryId) {
+      api.listDistricts(token, { countryId }).then(setDistricts).catch(() => {});
+    }
+  }, [needsFullPicker, role, countryId, token]);
+
+  useEffect(() => {
+    if (!needsChiefdom || !districtId) { setChiefdoms([]); return; }
+    api.listChiefdoms(token, { districtId }).then(setChiefdoms).catch(() => {});
+    setChiefdomId(""); setFacilityId(""); setFacilities([]);
+  }, [needsChiefdom, districtId, token]);
+
+  useEffect(() => {
+    if (!needsFullPicker || !chiefdomId) { if (needsFullPicker) setFacilities([]); return; }
+    api.listFacilities(token, { chiefdomId, forReports: true }).then(setFacilities).catch(() => {});
+    setFacilityId("");
+  }, [needsFullPicker, chiefdomId, token]);
+
+  // Tell the parent the deepest level actually chosen, since "and/or" means
+  // a user can stop at any level — Country alone, Country + District, etc.
+  useEffect(() => {
+    if (facilityId) return onChange({ level: "facility", unitId: facilityId });
+    if (chiefdomId) return onChange({ level: "chiefdom", unitId: chiefdomId });
+    if (districtId) return onChange({ level: "district", unitId: districtId });
+    if (countryId) return onChange({ level: "country", unitId: countryId });
+    onChange(null);
+  }, [countryId, districtId, chiefdomId, facilityId]);
+
+  if (!needsFullPicker) {
+    // facility_supervisor / facility_focal_person: one dropdown only.
+    return (
+      <div>
+        <Label>Facility</Label>
+        <SelectInput value={facilityId} onChange={(e) => setFacilityId(e.target.value)}>
+          <option value="">Select a facility…</option>
+          {facilities.map((f) => <option key={f.id} value={f.id}>{f.name}{f.chiefdom ? ` — ${f.chiefdom}` : ""}</option>)}
+        </SelectInput>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {needsCountry && (
+        <div>
+          <Label>Country</Label>
+          <SelectInput value={countryId} onChange={(e) => setCountryId(e.target.value)}>
+            <option value="">Select a country…</option>
+            {countries.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </SelectInput>
+        </div>
+      )}
+      {needsDistrict && (role === "system_admin" ? countryId : true) && (
+        <div>
+          <Label>District <span style={{ color: COLORS.muted, fontWeight: 400 }}>(optional — leave blank for the whole country)</span></Label>
+          <SelectInput value={districtId} onChange={(e) => setDistrictId(e.target.value)} disabled={role !== "system_admin" && districts.length <= 1}>
+            <option value="">All districts</option>
+            {districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </SelectInput>
+        </div>
+      )}
+      {needsChiefdom && districtId && (
+        <div>
+          <Label>Chiefdom <span style={{ color: COLORS.muted, fontWeight: 400 }}>(optional — leave blank for the whole district)</span></Label>
+          <SelectInput value={chiefdomId} onChange={(e) => setChiefdomId(e.target.value)}>
+            <option value="">All chiefdoms</option>
+            {chiefdoms.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </SelectInput>
+        </div>
+      )}
+      {chiefdomId && (
+        <div>
+          <Label>Facility <span style={{ color: COLORS.muted, fontWeight: 400 }}>(optional — leave blank for the whole chiefdom)</span></Label>
+          <SelectInput value={facilityId} onChange={(e) => setFacilityId(e.target.value)}>
+            <option value="">All facilities</option>
+            {facilities.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+          </SelectInput>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function generatedReportToCsv(report) {
+  const meta = `Organizational unit,${report.unit_level} — ${report.unit_name}\nVaccines,${report.vaccines_included.join("; ")}\nPeriod,${report.start_date || "all time"} to ${report.end_date || "present"}\n\n`;
+  const summary = `Children registered,${report.registered}\nFully immunized (FIC),${report.fully_immunized}\nNeed attention,${report.needs_attention}\nDoses given (total),${report.doses_given_total}\nOpen cases,${report.cases_open}\nCases returned to service,${report.cases_returned}\n\n`;
+  const header = "Vaccine,Doses given\n";
+  const body = report.doses_by_vaccine.map((r) => `"${r.antigen}",${r.doses_given}`).join("\n");
+  return meta + summary + header + body + "\n";
+}
+
+function GeneratedReportSection({ token, role }) {
+  const [vaccines, setVaccines] = useState([]);
+  const [selectedVaccines, setSelectedVaccines] = useState([]);
+  const [orgUnit, setOrgUnit] = useState(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [report, setReport] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    api.listVaccines(token).then((list) => {
+      setVaccines(list);
+      setSelectedVaccines(list.map((v) => v.antigen)); // all selected by default
+    }).catch(() => {});
+  }, [token]);
+
+  function toggleVaccine(antigen) {
+    setSelectedVaccines((prev) => prev.includes(antigen) ? prev.filter((a) => a !== antigen) : [...prev, antigen]);
+  }
+
+  async function generate() {
+    if (!orgUnit) return setError("Choose an organizational unit first.");
+    if (startDate && endDate && startDate > endDate) return setError("Start date can't be after end date.");
+    setError("");
+    setLoading(true);
+    try {
+      const allSelected = selectedVaccines.length === vaccines.length;
+      const data = await api.generateReport(token, {
+        level: orgUnit.level,
+        unitId: orgUnit.unitId,
+        antigens: allSelected ? [] : selectedVaccines, // omitting = "all vaccines" server-side too
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+      });
+      setReport(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const statRow = { padding: "10px 14px", textAlign: "right", color: COLORS.muted };
+
+  return (
+    <div style={{ marginTop: 32 }}>
+      <h3 style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6B6660", marginBottom: 12 }}>
+        Generate report
+      </h3>
+      <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, padding: 20, backgroundColor: COLORS.white, marginBottom: 20, display: "flex", flexDirection: "column", gap: 20 }}>
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.ink, margin: "0 0 10px" }}>1. Organizational unit</p>
+          <OrgUnitPicker token={token} role={role} onChange={setOrgUnit} />
+        </div>
+
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.ink, margin: "0 0 10px" }}>2. Vaccines</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {vaccines.map((v) => {
+              const checked = selectedVaccines.includes(v.antigen);
+              return (
+                <label
+                  key={v.antigen}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 13, cursor: "pointer",
+                    border: `1px solid ${checked ? COLORS.primary : COLORS.inputBorder}`,
+                    backgroundColor: checked ? COLORS.primary : COLORS.white,
+                    color: checked ? "#fff" : COLORS.ink,
+                  }}
+                >
+                  <input type="checkbox" checked={checked} onChange={() => toggleVaccine(v.antigen)} style={{ display: "none" }} />
+                  {v.antigen}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.ink, margin: "0 0 10px" }}>3. Period</p>
+          <div className="responsive-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div>
+              <Label>Start date <span style={{ color: COLORS.muted, fontWeight: 400 }}>(optional)</span></Label>
+              <TextInput type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} max={todayIso()} />
+            </div>
+            <div>
+              <Label>End date <span style={{ color: COLORS.muted, fontWeight: 400 }}>(optional)</span></Label>
+              <TextInput type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} max={todayIso()} />
+            </div>
+          </div>
+        </div>
+
+        <ErrorText>{error}</ErrorText>
+        <div style={{ display: "flex", gap: 12 }}>
+          <PrimaryButton onClick={generate} disabled={loading}>{loading ? "Generating…" : "Generate report"}</PrimaryButton>
+          {report && (
+            <button
+              onClick={() => downloadCsv(generatedReportToCsv(report), `idts-report-${report.unit_level}-${todayIso()}.csv`)}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 8, fontSize: 14, fontWeight: 500, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer" }}
+            >
+              <Download size={15} /> Download CSV
+            </button>
+          )}
+        </div>
+      </div>
+
+      {report && (
+        <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, backgroundColor: COLORS.white, overflow: "hidden" }}>
+          <div style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, backgroundColor: COLORS.subtleBg }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.ink, margin: 0 }}>
+              {LEVEL_LABELS[report.unit_level]}: {report.unit_name}
+            </p>
+            <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 2 }}>
+              {report.vaccines_included.join(", ")} · {report.start_date || "all time"} to {report.end_date || "present"}
+            </p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1, backgroundColor: COLORS.border }}>
+            {[
+              ["Children registered", report.registered],
+              ["Fully immunized (FIC)", report.fully_immunized],
+              ["Need attention", report.needs_attention],
+              ["Doses given", report.doses_given_total],
+              ["Open cases", report.cases_open],
+              ["Returned to service", report.cases_returned],
+            ].map(([label, value]) => (
+              <div key={label} style={{ backgroundColor: COLORS.white, padding: "14px 16px" }}>
+                <p style={{ fontSize: 20, fontWeight: 600, margin: 0, color: COLORS.ink }}>{value}</p>
+                <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 2 }}>{label}</p>
+              </div>
+            ))}
+          </div>
+          {report.doses_by_vaccine.length > 0 && (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+              <thead>
+                <tr style={{ backgroundColor: COLORS.subtleBg }}>
+                  <th style={{ textAlign: "left", padding: "10px 14px", color: COLORS.ink, fontWeight: 600, borderTop: `1px solid ${COLORS.border}` }}>Vaccine</th>
+                  <th style={{ textAlign: "right", padding: "10px 14px", color: COLORS.ink, fontWeight: 600, borderTop: `1px solid ${COLORS.border}` }}>Doses given</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.doses_by_vaccine.map((r, i) => (
+                  <tr key={r.antigen} style={{ borderTop: i === 0 ? "none" : `1px solid ${COLORS.border}` }}>
+                    <td style={{ padding: "10px 14px", color: COLORS.ink }}>{r.antigen}</td>
+                    <td style={statRow}>{r.doses_given}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ReportsPage({ token, currentUser }) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [report, setReport] = useState(null);
@@ -315,6 +617,7 @@ export default function ReportsPage({ token }) {
       )}
 
       <AggregateSection token={token} startDate={startDate} endDate={endDate} />
+      <GeneratedReportSection token={token} role={currentUser.role} />
     </div>
   );
 }

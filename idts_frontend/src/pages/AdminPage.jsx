@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { KeyRound, Trash2, UserPlus, UserX, UserCheck } from "lucide-react";
 import { api } from "../api/client.js";
-import { COLORS, CONTENT_MAX_WIDTH, facilityOptionLabel, groupFacilitiesByDistrict } from "../constants.js";
+import { COLORS, CONTENT_MAX_WIDTH, facilityOptionLabel } from "../constants.js";
 import { ErrorText, Label, Modal, Pill, PrimaryButton, SecondaryButton, SelectInput, TextInput } from "../components/ui.jsx";
 
 const ROLE_LABELS = {
@@ -17,31 +17,115 @@ const ROLES = Object.keys(ROLE_LABELS);
 // Who needs what: facility-level accounts see one facility, district managers one district.
 const FACILITY_ROLES = ["facility_focal_person", "vaccinator", "chw", "facility_supervisor"];
 const ACCESS_HINTS = {
-  facility_focal_person: "Sees only their own facility's data.",
-  vaccinator: "Sees only their own facility's data.",
-  chw: "Sees only their own facility's data.",
-  facility_supervisor: "Sees only their own facility's data.",
-  district_manager: "Sees all facilities in the chosen district, with reports by facility, user and chiefdom.",
-  national_user: "Sees all facilities in the country, with reports by district, facility and user.",
+  facility_focal_person: "Dashboard/children: their own facility only. Reports: any facility in their own chiefdom.",
+  vaccinator: "Sees only their own facility's data. No access to Reports.",
+  chw: "Sees only their own facility's data. No access to Reports.",
+  facility_supervisor: "Dashboard/children: their own facility only. Reports: any facility in their own chiefdom.",
+  district_manager: "Sees all facilities in their assigned district, with reports by facility, user and chiefdom.",
+  national_user: "Sees all facilities in their assigned country, with reports by district, facility and user.",
   system_admin: "Sees everything and manages user accounts.",
 };
+// Roles whose account is ultimately tied to one facility (facility_id) —
+// the last step of every one of their cascades below.
+const ENDS_IN_FACILITY_ROLES = ["facility_focal_person", "vaccinator", "chw", "facility_supervisor"];
+// These three walk the full Country -> District -> Chiefdom -> Facility
+// path; facility_supervisor skips District (Country -> Chiefdom -> Facility),
+// by design — Facility Supervisors pick a chiefdom directly within a country.
+const FULL_PATH_ROLES = ["facility_focal_person", "vaccinator", "chw"];
 
-function CreateUserModal({ token, facilities, districts, onCreated, onClose }) {
+function CreateUserModal({ token, onCreated, onClose }) {
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("chw");
-  const [facilityId, setFacilityId] = useState("");
+
+  const [countries, setCountries] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [chiefdoms, setChiefdoms] = useState([]);
+  const [facilityOptions, setFacilityOptions] = useState([]);
+
+  const [countryId, setCountryId] = useState("");
   const [districtId, setDistrictId] = useState("");
+  const [chiefdomId, setChiefdomId] = useState("");
+  const [facilityId, setFacilityId] = useState("");
+
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Which steps this role's cascade needs. system_admin needs none —
+  // every other role is assigned to a place somewhere in the geography
+  // tree, built so more countries/districts can be added later without
+  // changing this logic.
+  const needsCountry = role !== "system_admin";
+  const needsDistrict = role === "district_manager" || FULL_PATH_ROLES.includes(role);
+  const needsChiefdom = role === "facility_supervisor" || FULL_PATH_ROLES.includes(role);
+  const needsFacility = ENDS_IN_FACILITY_ROLES.includes(role);
+  // Facility Supervisor's chiefdom list spans the whole country (no District
+  // step); the three full-path roles get chiefdoms within their one District.
+  const chiefdomsKeyedByCountry = role === "facility_supervisor";
+
+  // Reset everything downstream whenever the role changes.
+  useEffect(() => {
+    setDistrictId(""); setChiefdomId(""); setFacilityId("");
+    setDistricts([]); setChiefdoms([]); setFacilityOptions([]);
+  }, [role]);
+
+  // Country list: fetched once, for any role that needs one. Only one
+  // country exists today, so it's auto-selected — the dropdown still
+  // shows so more countries can be added later without a code change.
+  useEffect(() => {
+    if (!needsCountry || countries.length > 0) return;
+    api.listCountries(token).then((list) => {
+      setCountries(list);
+      if (list.length === 1) setCountryId(list[0].id);
+    }).catch(() => {});
+  }, [needsCountry, countries.length, token]);
+
+  // District list: only for roles that walk the full path.
+  useEffect(() => {
+    setDistrictId(""); setChiefdomId(""); setFacilityId(""); setChiefdoms([]); setFacilityOptions([]);
+    if (needsDistrict && countryId) {
+      api.listDistricts(token, { countryId }).then((list) => {
+        setDistricts(list);
+        if (list.length === 1) setDistrictId(list[0].id);
+      }).catch(() => {});
+    } else {
+      setDistricts([]);
+    }
+  }, [needsDistrict, countryId, token]);
+
+  // Chiefdom list: within a District (most facility roles) or flat across
+  // the whole Country (Facility Supervisor — no District step for them).
+  useEffect(() => {
+    setChiefdomId(""); setFacilityId(""); setFacilityOptions([]);
+    if (!needsChiefdom) { setChiefdoms([]); return; }
+    if (chiefdomsKeyedByCountry) {
+      if (countryId) api.listChiefdoms(token, { countryId }).then(setChiefdoms).catch(() => {});
+      else setChiefdoms([]);
+    } else if (districtId) {
+      api.listChiefdoms(token, { districtId }).then(setChiefdoms).catch(() => {});
+    } else {
+      setChiefdoms([]);
+    }
+  }, [needsChiefdom, chiefdomsKeyedByCountry, countryId, districtId, token]);
+
+  // Facility list: within the chosen Chiefdom.
+  useEffect(() => {
+    setFacilityId("");
+    if (needsFacility && chiefdomId) {
+      api.listFacilities(token, { chiefdomId }).then(setFacilityOptions).catch(() => {});
+    } else {
+      setFacilityOptions([]);
+    }
+  }, [needsFacility, chiefdomId, token]);
 
   async function submit() {
     if (!fullName.trim()) return setError("Enter the user's full name.");
     if (username.trim().length < 3) return setError("Username must be at least 3 characters.");
     if (password.length < 8) return setError("Password must be at least 8 characters.");
-    if (FACILITY_ROLES.includes(role) && !facilityId) return setError("Choose the facility this account belongs to.");
+    if (role === "national_user" && !countryId) return setError("Choose the country this account is assigned to.");
     if (role === "district_manager" && !districtId) return setError("Choose the district this account manages.");
+    if (needsFacility && !facilityId) return setError("Choose the facility this account belongs to.");
     setError("");
     setSubmitting(true);
     try {
@@ -50,8 +134,8 @@ function CreateUserModal({ token, facilities, districts, onCreated, onClose }) {
         username: username.trim(),
         password,
         role,
-        facility_id: FACILITY_ROLES.includes(role) ? facilityId : null,
-        geographic_area_id: role === "district_manager" ? districtId : null,
+        facility_id: needsFacility ? facilityId : null,
+        geographic_area_id: role === "district_manager" ? districtId : role === "national_user" ? countryId : null,
       });
       onCreated(user);
     } catch (err) {
@@ -86,25 +170,43 @@ function CreateUserModal({ token, facilities, districts, onCreated, onClose }) {
           </SelectInput>
         </div>
         <p style={{ fontSize: 12, color: COLORS.muted, margin: "-8px 0 0" }}>{ACCESS_HINTS[role]}</p>
-        {FACILITY_ROLES.includes(role) && (
+
+        {needsCountry && (
           <div>
-            <Label>Facility</Label>
-            <SelectInput value={facilityId} onChange={(e) => setFacilityId(e.target.value)}>
-              <option value="">Select a facility…</option>
-              {groupFacilitiesByDistrict(facilities).map(([district, facs]) => (
-                <optgroup key={district} label={district}>
-                  {facs.map((f) => <option key={f.id} value={f.id}>{facilityOptionLabel(f)}</option>)}
-                </optgroup>
-              ))}
+            <Label>Country</Label>
+            <SelectInput value={countryId} onChange={(e) => setCountryId(e.target.value)}>
+              <option value="">Select a country…</option>
+              {countries.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </SelectInput>
           </div>
         )}
-        {role === "district_manager" && (
+
+        {needsDistrict && countryId && (
           <div>
             <Label>District</Label>
             <SelectInput value={districtId} onChange={(e) => setDistrictId(e.target.value)}>
               <option value="">Select a district…</option>
               {districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </SelectInput>
+          </div>
+        )}
+
+        {needsChiefdom && (chiefdomsKeyedByCountry ? countryId : districtId) && (
+          <div>
+            <Label>Chiefdom</Label>
+            <SelectInput value={chiefdomId} onChange={(e) => setChiefdomId(e.target.value)}>
+              <option value="">Select a chiefdom…</option>
+              {chiefdoms.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </SelectInput>
+          </div>
+        )}
+
+        {needsFacility && chiefdomId && (
+          <div>
+            <Label>Facility</Label>
+            <SelectInput value={facilityId} onChange={(e) => setFacilityId(e.target.value)}>
+              <option value="">Select a facility…</option>
+              {facilityOptions.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
             </SelectInput>
           </div>
         )}
@@ -337,8 +439,6 @@ export default function AdminPage({ token, facilities, currentUserId }) {
       {showCreate && (
         <CreateUserModal
           token={token}
-          facilities={facilities}
-          districts={districts}
           onCreated={() => { setShowCreate(false); load(); }}
           onClose={() => setShowCreate(false)}
         />
