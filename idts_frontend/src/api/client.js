@@ -114,8 +114,23 @@ export const api = {
   createChw: (token, fullName, facilityId) =>
     request("/api/v1/users/chw", { method: "POST", token, body: { full_name: fullName, facility_id: facilityId } }),
 
-  listFacilities: (token) => request("/api/v1/facilities", { token }),
-  listDistricts: (token) => request("/api/v1/facilities/districts", { token }),
+  listFacilities: (token, { chiefdomId, forReports } = {}) => {
+    const params = new URLSearchParams();
+    if (chiefdomId) params.set("chiefdom_id", chiefdomId);
+    if (forReports) params.set("for_reports", "true");
+    const qs = params.toString();
+    return request(`/api/v1/facilities${qs ? `?${qs}` : ""}`, { token });
+  },
+  listCountries: (token) => request("/api/v1/facilities/countries", { token }),
+  listDistricts: (token, { countryId } = {}) =>
+    request(`/api/v1/facilities/districts${countryId ? `?country_id=${countryId}` : ""}`, { token }),
+  listChiefdoms: (token, { districtId, countryId } = {}) => {
+    const params = new URLSearchParams();
+    if (districtId) params.set("district_id", districtId);
+    if (countryId) params.set("country_id", countryId);
+    const qs = params.toString();
+    return request(`/api/v1/facilities/chiefdoms${qs ? `?${qs}` : ""}`, { token });
+  },
 
   listChildren: (token, facilityId) => request("/api/v1/children", { token, params: { facility_id: facilityId } }),
   getChild: (token, childId) => request(`/api/v1/children/${childId}`, { token }),
@@ -145,6 +160,16 @@ export const api = {
     request("/api/v1/dashboard", { token, params: { facility_id: facilityId } }),
 
   getReportScope: (token) => request("/api/v1/reports/scope", { token }),
+  listVaccines: (token) => request("/api/v1/reports/vaccines", { token }),
+  generateReport: (token, { level, unitId, antigens, startDate, endDate }) => {
+    const params = new URLSearchParams();
+    params.set("level", level);
+    params.set("unit_id", unitId);
+    if (startDate) params.set("start_date", startDate);
+    if (endDate) params.set("end_date", endDate);
+    (antigens || []).forEach((a) => params.append("antigens", a));
+    return request(`/api/v1/reports/generate?${params.toString()}`, { token });
+  },
   getAggregateReport: (token, { groupBy, startDate, endDate } = {}) =>
     request(`/api/v1/reports/aggregate?group_by=${groupBy}${startDate ? `&start_date=${startDate}` : ""}${endDate ? `&end_date=${endDate}` : ""}`, { token }),
   getVaccinationsSummary: (token, { startDate, endDate, facilityId } = {}) =>
