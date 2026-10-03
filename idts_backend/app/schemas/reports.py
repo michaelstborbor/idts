@@ -47,3 +47,30 @@ class AggregateReportOut(BaseModel):
     end_date: Optional[date] = None
     rows: list[AggregateRow]
     totals: AggregateRow
+
+
+class VaccineOut(BaseModel):
+    antigen: str
+
+
+class DoseByVaccine(BaseModel):
+    antigen: str
+    doses_given: int
+
+
+class GeneratedReportOut(BaseModel):
+    """The new 3-step report: Organizational Unit + Data (vaccines) + Period.
+    A separate, simpler report from the Aggregate report above — this one
+    is a single set of totals for ONE chosen unit, not a breakdown table."""
+    unit_level: str  # country / district / chiefdom / facility
+    unit_name: str
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    vaccines_included: list[str]
+    registered: int
+    fully_immunized: int
+    needs_attention: int
+    doses_given_total: int
+    doses_by_vaccine: list[DoseByVaccine]
+    cases_open: int
+    cases_returned: int
