@@ -2,15 +2,18 @@ import uuid
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user
+from app.core.deps import require_role
 from app.core.scope import (
     LEVEL_GROUPINGS,
+    REPORT_ROLES,
     access_level,
     accessible_facility_ids,
+    facility_ids_under_area,
+    report_scope_facility_ids,
     resolve_facility_scope,
     restrict,
     scope_label,
@@ -23,9 +26,12 @@ from app.models.user import Facility, GeographicArea, User
 from app.schemas.reports import (
     AggregateReportOut,
     AggregateRow,
+    DoseByVaccine,
+    GeneratedReportOut,
     ScopeInfoOut,
     VaccinationSummaryOut,
     VaccinationSummaryRow,
+    VaccineOut,
 )
 from app.services.schedule_service import evaluate_child, is_fully_immunized_child
 
@@ -38,7 +44,7 @@ def vaccinations_summary(
     end_date: Optional[date] = None,
     facility_id: Optional[uuid.UUID] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_role(*REPORT_ROLES)),
 ):
     """
     Doses given, grouped by antigen and session type (fixed / outreach /
@@ -106,7 +112,7 @@ NUMERIC_FIELDS = ["registered", "fully_immunized", "needs_attention", "cases_ope
 @router.get("/scope", response_model=ScopeInfoOut)
 def my_access_scope(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_role(*REPORT_ROLES)),
 ):
     """Tells the frontend what this account can see and which report
     breakdowns it may request."""
@@ -188,7 +194,7 @@ def aggregate_report(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_role(*REPORT_ROLES)),
 ):
     """
     Aggregate report, always limited to the caller's access scope:
@@ -310,4 +316,141 @@ def _user_breakdown(db: Session, scope, start_date, end_date, label: str) -> Agg
         end_date=end_date,
         rows=rows,
         totals=_sum_rows(rows, ["doses_given", "tracing_attempts", "cases_assigned"]),
+    )
+
+
+# ---------------------------------------------------------------------------
+# The 3-step report builder: Organizational Unit + Data (vaccines) + Period.
+# A separate, simpler report from the Aggregate report above — this one
+# always returns ONE set of totals for ONE chosen unit (a country, district,
+# chiefdom or facility), not a breakdown table.
+# ---------------------------------------------------------------------------
+
+VALID_LEVELS = {"country", "district", "chiefdom", "facility"}
+
+
+@router.get("/vaccines", response_model=list[VaccineOut])
+def list_vaccines(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(*REPORT_ROLES)),
+):
+    """Every antigen in the immunization schedule, for the report's vaccine
+    checklist. One row per antigen even though some have several doses."""
+    rows = (
+        db.query(ScheduleEntry.antigen, func.min(ScheduleEntry.display_order))
+        .group_by(ScheduleEntry.antigen)
+        .order_by(func.min(ScheduleEntry.display_order))
+        .all()
+    )
+    return [VaccineOut(antigen=antigen) for antigen, _ in rows]
+
+
+@router.get("/generate", response_model=GeneratedReportOut)
+def generate_report(
+    level: str,
+    unit_id: uuid.UUID,
+    antigens: Optional[list[str]] = Query(default=None),
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(*REPORT_ROLES)),
+):
+    """
+    level: "country" | "district" | "chiefdom" | "facility" — which kind of
+    unit was chosen in the Organizational Unit step.
+    unit_id: that unit's id (a GeographicArea id, or a Facility id for
+    level="facility").
+    antigens: which vaccines to include in the dose breakdown — every
+    antigen in the schedule if omitted or empty.
+
+    Access is checked against report_scope_facility_ids (app/core/scope.py):
+    admin sees anything; national/district accounts are limited to their
+    assigned country/district; facility_supervisor and facility_focal_person
+    are limited to their own CHIEFDOM (wider than their everyday Dashboard
+    scope, by design — see that function's docstring). vaccinator/chw never
+    reach here at all (require_role above already returns 403 for them).
+    """
+    if level not in VALID_LEVELS:
+        raise HTTPException(status_code=400, detail=f"level must be one of: {', '.join(sorted(VALID_LEVELS))}.")
+    if start_date and end_date and start_date > end_date:
+        raise HTTPException(status_code=400, detail="start_date must not be after end_date.")
+
+    if level == "facility":
+        facility = db.query(Facility).filter(Facility.id == unit_id).first()
+        if facility is None:
+            raise HTTPException(status_code=404, detail="Facility not found.")
+        unit_name = facility.name
+        target_ids = [facility.id]
+    else:
+        area = db.query(GeographicArea).filter(GeographicArea.id == unit_id, GeographicArea.level == level).first()
+        if area is None:
+            raise HTTPException(status_code=404, detail=f"{level.title()} not found.")
+        unit_name = area.name
+        target_ids = facility_ids_under_area(db, area.id)
+
+    allowed_ids = report_scope_facility_ids(db, current_user)
+    if allowed_ids is not None and not set(target_ids).issubset(set(allowed_ids)):
+        raise HTTPException(status_code=403, detail="You don't have access to that selection.")
+
+    # --- child snapshot: registered / fully immunized / needs attention ---
+    registered = fully_immunized = needs_attention = 0
+    children_query = db.query(Child).filter(Child.status == "active", Child.deleted_at.is_(None))
+    children_query = restrict(children_query, Child.facility_id, target_ids)
+    for child in children_query.all():
+        registered += 1
+        evaluations = evaluate_child(db, child)
+        if any(e.status in NEEDS_ATTENTION for e in evaluations):
+            needs_attention += 1
+        if is_fully_immunized_child(db, child, evaluations=evaluations):
+            fully_immunized += 1
+
+    # --- doses given, by vaccine, within the date range ---
+    dose_query = (
+        db.query(ScheduleEntry.antigen, func.count(VaccinationEvent.id))
+        .join(ScheduleEntry, VaccinationEvent.schedule_entry_id == ScheduleEntry.id)
+        .join(Child, VaccinationEvent.child_id == Child.id)
+        .filter(Child.deleted_at.is_(None))
+    )
+    dose_query = restrict(dose_query, Child.facility_id, target_ids)
+    if start_date:
+        dose_query = dose_query.filter(VaccinationEvent.event_date >= start_date)
+    if end_date:
+        dose_query = dose_query.filter(VaccinationEvent.event_date <= end_date)
+    if antigens:
+        dose_query = dose_query.filter(ScheduleEntry.antigen.in_(antigens))
+    dose_query = dose_query.group_by(ScheduleEntry.antigen)
+
+    doses_by_vaccine: dict = {}
+    for antigen, count in dose_query.all():
+        doses_by_vaccine[antigen] = doses_by_vaccine.get(antigen, 0) + count
+
+    # --- defaulter cases: open vs. returned-to-service, within scope ---
+    case_query = (
+        db.query(DefaulterCase.status, DefaulterCase.closure_reason, func.count(DefaulterCase.id))
+        .join(Child, DefaulterCase.child_id == Child.id)
+        .filter(Child.deleted_at.is_(None))
+    )
+    case_query = restrict(case_query, Child.facility_id, target_ids).group_by(
+        DefaulterCase.status, DefaulterCase.closure_reason
+    )
+    cases_open = cases_returned = 0
+    for case_status, closure_reason, count in case_query.all():
+        if case_status != "closed":
+            cases_open += count
+        elif closure_reason in RETURNED_REASONS:
+            cases_returned += count
+
+    return GeneratedReportOut(
+        unit_level=level,
+        unit_name=unit_name,
+        start_date=start_date,
+        end_date=end_date,
+        vaccines_included=sorted(antigens) if antigens else ["All vaccines"],
+        registered=registered,
+        fully_immunized=fully_immunized,
+        needs_attention=needs_attention,
+        doses_given_total=sum(doses_by_vaccine.values()),
+        doses_by_vaccine=[DoseByVaccine(antigen=a, doses_given=c) for a, c in sorted(doses_by_vaccine.items())],
+        cases_open=cases_open,
+        cases_returned=cases_returned,
     )
