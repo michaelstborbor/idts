@@ -258,6 +258,7 @@ export default function App() {
           <ChildForm
             token={token}
             facilities={facilities}
+            currentUser={currentUser}
             mode="create"
             onSaved={() => { setView("list"); loadAll(); }}
             onCancel={() => setView("list")}
@@ -266,6 +267,7 @@ export default function App() {
           <ChildForm
             token={token}
             facilities={facilities}
+            currentUser={currentUser}
             mode="edit"
             initialChild={editingChild}
             onSaved={() => { setView("profile"); loadAll(); }}
@@ -311,6 +313,7 @@ export default function App() {
           <DashboardPage token={token} childrenCount={children.length} />
         ) : (
           <ChildrenListPage
+            token={token}
             children={children}
             dueRowsByChildId={Object.fromEntries(dueRows.map((r) => [r.child.id, r]))}
             fullyImmunizedIds={fullyImmunizedIds}
