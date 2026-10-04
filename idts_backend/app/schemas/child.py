@@ -90,3 +90,10 @@ class DoseEvaluationOut(BaseModel):
 class ChildDetailOut(ChildOut):
     schedule: list[DoseEvaluationOut] = []
     fully_immunized: bool = False
+
+
+class ChildSearchResult(ChildDetailOut):
+    """Search result for the district-wide duplicate-check pane — same as
+    ChildDetailOut plus the facility NAME (not just its id), so the
+    searcher can see at a glance which facility a match is registered at."""
+    facility_name: Optional[str] = None
