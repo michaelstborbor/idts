@@ -40,13 +40,11 @@ const ENDS_IN_AREA_ROLES = ["national_user", "district_manager", "facility_super
 // ---------------------------------------------------------------------------
 function GeographyFields({ token, role, onChange }) {
   const needsCountry = role !== "system_admin";
-  const needsDistrict = role === "district_manager" || ENDS_IN_FACILITY_ROLES.includes(role);
+  // Facility Supervisor now walks District too, same as the facility-ending
+  // roles below — the only difference is where their cascade stops.
+  const needsDistrict = role === "district_manager" || role === "facility_supervisor" || ENDS_IN_FACILITY_ROLES.includes(role);
   const needsChiefdom = role === "facility_supervisor" || ENDS_IN_FACILITY_ROLES.includes(role);
   const needsFacility = ENDS_IN_FACILITY_ROLES.includes(role);
-  // Facility Supervisor's chiefdom list spans the whole country (no District
-  // step — their account ends AT the chiefdom); the facility-ending roles
-  // get chiefdoms within their one District.
-  const chiefdomsKeyedByCountry = role === "facility_supervisor";
 
   const [countries, setCountries] = useState([]);
   const [districts, setDistricts] = useState([]);
@@ -85,16 +83,12 @@ function GeographyFields({ token, role, onChange }) {
 
   useEffect(() => {
     setChiefdomId(""); setFacilityId(""); setFacilityOptions([]);
-    if (!needsChiefdom) { setChiefdoms([]); return; }
-    if (chiefdomsKeyedByCountry) {
-      if (countryId) api.listChiefdoms(token, { countryId }).then(setChiefdoms).catch(() => {});
-      else setChiefdoms([]);
-    } else if (districtId) {
+    if (needsChiefdom && districtId) {
       api.listChiefdoms(token, { districtId }).then(setChiefdoms).catch(() => {});
     } else {
       setChiefdoms([]);
     }
-  }, [needsChiefdom, chiefdomsKeyedByCountry, countryId, districtId, token]);
+  }, [needsChiefdom, districtId, token]);
 
   useEffect(() => {
     setFacilityId("");
@@ -130,7 +124,7 @@ function GeographyFields({ token, role, onChange }) {
           </SelectInput>
         </div>
       )}
-      {needsChiefdom && (chiefdomsKeyedByCountry ? countryId : districtId) && (
+      {needsChiefdom && districtId && (
         <div>
           <Label>Chiefdom</Label>
           <SelectInput value={chiefdomId} onChange={(e) => setChiefdomId(e.target.value)}>
