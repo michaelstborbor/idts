@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Download } from "lucide-react";
 import { api } from "../api/client.js";
 import { COLORS, CONTENT_MAX_WIDTH, SESSION_TYPES, todayIso } from "../constants.js";
-import { ErrorText, Label, PrimaryButton, TextInput } from "../components/ui.jsx";
+import { ErrorText, Label, PrimaryButton, SelectInput, TextInput } from "../components/ui.jsx";
 
 function sessionLabel(value) {
   return SESSION_TYPES.find((s) => s.value === value)?.label || value;
