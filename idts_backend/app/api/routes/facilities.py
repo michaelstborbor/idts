@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
-from app.core.scope import accessible_facility_ids, restrict
+from app.core.scope import accessible_facility_ids, registration_root_area, restrict
 from app.db.session import get_db
 from app.models.user import Facility, GeographicArea, User
 from app.schemas.facility import AreaOut, FacilityOut
@@ -29,8 +29,7 @@ def _ancestor_of_level(areas: dict, area_id, level: str):
 def _with_chiefdom_and_district(db: Session, facilities: list) -> list:
     """Attaches each facility's chiefdom and district (id + name), so the
     frontend can show e.g. "Ngelehun (Badjia, Bo District)" and filter
-    facility pickers by chiefdom — needed now that facilities span several
-    districts."""
+    facility pickers by chiefdom."""
     areas = {a.id: a for a in db.query(GeographicArea).all()}
     out = []
     for f in facilities:
@@ -47,24 +46,13 @@ def _with_chiefdom_and_district(db: Session, facilities: list) -> list:
 
 
 # ---------------------------------------------------------------------------
-# Geography pickers: countries / districts / chiefdoms. Used in two places:
-#   1. Admin > Create user — always called by a system_admin, who sees
-#      everything, so the cascading selectors can offer any country,
-#      district or chiefdom.
-#   2. The Reports Organizational Unit step — called by whichever role is
-#      logged in, so these are filtered to what THAT account may see
-#      (same idea as app/core/scope.py, applied one level up — to the
-#      geography tree itself, not just facilities).
+# Geography pickers: countries / districts / chiefdoms. Every role gets a
+# result here, not just admin/national/district — a chiefdom- or facility-
+# level account browsing Child registration or (for roles with report
+# access) the Reports Organizational Unit step needs to see the single
+# district/chiefdom their own area or facility sits in, same idea as
+# registration_root_area in app/core/scope.py, which powers all of this.
 # ---------------------------------------------------------------------------
-
-def _user_area_root(db: Session, user: User):
-    """The highest area this user may browse from. None + role==admin means
-    unrestricted; None for anyone else means 'not assigned — sees nothing'."""
-    from app.core.scope import report_root_area  # local import avoids a cycle
-    if user.role == "system_admin":
-        return None
-    return report_root_area(db, user)
-
 
 @router.get("/countries", response_model=list[AreaOut])
 def list_countries(
@@ -73,10 +61,12 @@ def list_countries(
 ):
     if current_user.role == "system_admin":
         return db.query(GeographicArea).filter(GeographicArea.level == "country").order_by(GeographicArea.name).all()
-    if current_user.role == "national_user":
-        root = _user_area_root(db, current_user)
-        return [root] if root else []
-    return []
+    root = registration_root_area(db, current_user)
+    if root is None:
+        return []
+    areas = {a.id: a for a in db.query(GeographicArea).all()}
+    country = root if root.level == "country" else _ancestor_of_level(areas, root.id, "country")
+    return [country] if country else []
 
 
 @router.get("/districts", response_model=list[AreaOut])
@@ -85,23 +75,29 @@ def list_districts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    areas = {a.id: a for a in db.query(GeographicArea).all()}
+
     if current_user.role == "system_admin":
-        areas = {a.id: a for a in db.query(GeographicArea).all()}
         query = db.query(GeographicArea).filter(GeographicArea.level == "district")
         if country_id:
             query = query.filter(GeographicArea.id.in_(
                 [a.id for a in areas.values() if a.level == "district" and _ancestor_of_level(areas, a.id, "country") and _ancestor_of_level(areas, a.id, "country").id == country_id]
             ))
         return query.order_by(GeographicArea.name).all()
+
     if current_user.role == "national_user":
-        root = _user_area_root(db, current_user)  # their assigned country
+        root = registration_root_area(db, current_user)  # their country
         if not root:
             return []
         return db.query(GeographicArea).filter(GeographicArea.level == "district", GeographicArea.parent_id == root.id).order_by(GeographicArea.name).all()
-    if current_user.role == "district_manager":
-        root = _user_area_root(db, current_user)  # their own district
-        return [root] if root else []
-    return []
+
+    # district_manager, facility_supervisor, and the three facility-only
+    # roles: exactly one district — the one they're in or under.
+    root = registration_root_area(db, current_user)
+    if root is None:
+        return []
+    district = root if root.level == "district" else _ancestor_of_level(areas, root.id, "district")
+    return [district] if district else []
 
 
 @router.get("/chiefdoms", response_model=list[AreaOut])
@@ -112,8 +108,7 @@ def list_chiefdoms(
     current_user: User = Depends(get_current_user),
 ):
     """district_id narrows to one district; country_id narrows to every
-    chiefdom in a country regardless of district (used for Facility
-    Supervisor, who picks a chiefdom directly within a country)."""
+    chiefdom in a country regardless of district."""
     areas = {a.id: a for a in db.query(GeographicArea).all()}
 
     def chiefdoms_in_district(d_id):
@@ -132,7 +127,7 @@ def list_chiefdoms(
         return sorted(result, key=lambda a: a.name)
 
     if current_user.role == "national_user":
-        root = _user_area_root(db, current_user)  # their country
+        root = registration_root_area(db, current_user)  # their country
         if not root:
             return []
         if district_id:
@@ -145,37 +140,31 @@ def list_chiefdoms(
         return sorted(result, key=lambda a: a.name)
 
     if current_user.role == "district_manager":
-        root = _user_area_root(db, current_user)  # their district
+        root = registration_root_area(db, current_user)  # their district
         if not root:
             return []
         return sorted(chiefdoms_in_district(root.id), key=lambda a: a.name)
 
-    # facility_supervisor/facility_focal_person's own chiefdom is fixed and
-    # already known from their facility — they don't need a chiefdom list.
-    return []
+    # facility_supervisor (assigned directly to a chiefdom) and the three
+    # facility-only roles (via their facility's chiefdom): exactly one.
+    root = registration_root_area(db, current_user)
+    if root is None:
+        return []
+    chiefdom = root if root.level == "chiefdom" else _ancestor_of_level(areas, root.id, "chiefdom")
+    return [chiefdom] if chiefdom else []
 
 
 @router.get("", response_model=list[FacilityOut])
 def list_facilities(
     chiefdom_id: Optional[uuid.UUID] = None,
-    for_reports: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Only the facilities this user is allowed to see. `for_reports=true`
-    uses the (sometimes wider) report scope — facility_supervisor and
-    facility_focal_person get their whole chiefdom there, not just their
-    own facility (see app/core/scope.py). Pass chiefdom_id to narrow to
-    one chiefdom (e.g. a Create-user or report facility picker).
-    """
-    from app.core.scope import can_access_reports, report_scope_facility_ids
-    if for_reports and not can_access_reports(current_user):
-        return []
-    scope_ids = report_scope_facility_ids(db, current_user) if for_reports else accessible_facility_ids(db, current_user)
-
+    """Only the facilities this user is allowed to see (app/core/scope.py).
+    Pass chiefdom_id to narrow to one chiefdom (e.g. a cascading picker's
+    last step)."""
     query = db.query(Facility).filter(Facility.is_active.is_(True))
-    query = restrict(query, Facility.id, scope_ids)
+    query = restrict(query, Facility.id, accessible_facility_ids(db, current_user))
     if chiefdom_id:
         query = query.filter(Facility.geographic_area_id == chiefdom_id)
     facilities = query.order_by(Facility.name).all()

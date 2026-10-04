@@ -13,7 +13,6 @@ from app.core.scope import (
     access_level,
     accessible_facility_ids,
     facility_ids_under_area,
-    report_scope_facility_ids,
     resolve_facility_scope,
     restrict,
     scope_label,
@@ -363,12 +362,12 @@ def generate_report(
     antigens: which vaccines to include in the dose breakdown — every
     antigen in the schedule if omitted or empty.
 
-    Access is checked against report_scope_facility_ids (app/core/scope.py):
-    admin sees anything; national/district accounts are limited to their
-    assigned country/district; facility_supervisor and facility_focal_person
-    are limited to their own CHIEFDOM (wider than their everyday Dashboard
-    scope, by design — see that function's docstring). vaccinator/chw never
-    reach here at all (require_role above already returns 403 for them).
+    Access is checked against accessible_facility_ids (app/core/scope.py) —
+    the SAME scope as Dashboard/Children now, not a separately-widened one
+    (an earlier version of this gave facility_supervisor/facility_focal_person
+    a wider report-only scope; that's gone now that facility_supervisor is
+    itself assigned at the chiefdom level). vaccinator/chw never reach here
+    at all (require_role above already returns 403 for them).
     """
     if level not in VALID_LEVELS:
         raise HTTPException(status_code=400, detail=f"level must be one of: {', '.join(sorted(VALID_LEVELS))}.")
@@ -388,7 +387,7 @@ def generate_report(
         unit_name = area.name
         target_ids = facility_ids_under_area(db, area.id)
 
-    allowed_ids = report_scope_facility_ids(db, current_user)
+    allowed_ids = accessible_facility_ids(db, current_user)
     if allowed_ids is not None and not set(target_ids).issubset(set(allowed_ids)):
         raise HTTPException(status_code=403, detail="You don't have access to that selection.")
 

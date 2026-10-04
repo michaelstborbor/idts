@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_user, require_role
 from app.core.scope import (
     accessible_facility_ids,
+    district_search_scope_facility_ids,
     ensure_child_in_scope,
     ensure_facility_in_scope,
     resolve_facility_scope,
@@ -15,11 +16,13 @@ from app.core.scope import (
 )
 from app.db.session import get_db
 from app.models.child import Child
+from app.models.user import Facility
 from app.models.user import User
 from app.schemas.child import (
     ChildCreate,
     ChildDetailOut,
     ChildOut,
+    ChildSearchResult,
     ChildUpdate,
     DoseEvaluationOut,
     DuplicateCandidate,
@@ -84,6 +87,59 @@ def find_duplicates(
         DuplicateCandidate(child=ChildOut.model_validate(c), match_reason="Matching name and date of birth")
         for c in candidates
     ]
+
+
+@router.get("/search", response_model=list[ChildSearchResult])
+def search_children(
+    name: Optional[str] = None,
+    system_id: Optional[str] = None,
+    dob: Optional[date] = None,
+    caregiver_name: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Powers the "Search for child" pane next to Register child — the
+    trained first step before registering, to catch a child who already
+    has a record at a different facility before a duplicate gets created.
+
+    Scoped to the searcher's whole DISTRICT (district_search_scope_facility_ids,
+    app/core/scope.py) — wider than their everyday facility/chiefdom access
+    for facility_supervisor and the facility-only roles, so a child who
+    moved facilities within the district is still found. Returns FULL
+    detail (including vaccination history), so the searcher can actually
+    judge whether it's the same child — the one deliberate, narrow
+    exception to normal scope anywhere in this system. It does not change
+    what the searcher can edit, record doses against, or see anywhere
+    else: this is read-only, and only for records this search itself
+    surfaces.
+    """
+    if not any([name, system_id, dob, caregiver_name]):
+        raise HTTPException(status_code=400, detail="Enter at least one search term.")
+
+    scope_ids = district_search_scope_facility_ids(db, current_user)
+    query = db.query(Child).filter(Child.deleted_at.is_(None))
+    query = restrict(query, Child.facility_id, scope_ids)
+    if name:
+        query = query.filter(Child.full_name.ilike(f"%{name.strip()}%"))
+    if system_id:
+        query = query.filter(Child.system_id.ilike(f"%{system_id.strip()}%"))
+    if dob:
+        query = query.filter(Child.dob == dob)
+    if caregiver_name:
+        query = query.filter(Child.caregiver_name.ilike(f"%{caregiver_name.strip()}%"))
+
+    results = query.order_by(Child.full_name).limit(25).all()
+    facility_names = {f.id: f.name for f in db.query(Facility).all()}
+    out = []
+    for child in results:
+        evaluations = evaluate_child(db, child)
+        detail = ChildSearchResult.model_validate(child)
+        detail.schedule = [_dose_evaluation_out(e) for e in evaluations]
+        detail.fully_immunized = is_fully_immunized_child(db, child, evaluations=evaluations)
+        detail.facility_name = facility_names.get(child.facility_id)
+        out.append(detail)
+    return out
 
 
 @router.post("", response_model=ChildOut, status_code=status.HTTP_201_CREATED)
