@@ -44,6 +44,19 @@ async def lifespan(app: FastAPI):
     if os.environ.get("IDTS_AUTO_SEED", "true").lower() in ("1", "true", "yes"):
         from app.seed import seed
         seed()
+    # Adds any districts/chiefdoms/facilities listed in app/data/new_districts.json
+    # that aren't in the database yet (Bo District, Pujehun District, and any more
+    # added later). Unlike seed() above, this runs on EVERY startup, not just when
+    # the database is empty — but it's safe to run repeatedly: anything already
+    # there by name is skipped, nothing is duplicated or overwritten (see
+    # app/add_geography.py). This is what makes "add two more districts" a data
+    # change + a redeploy, with no shell/console access needed.
+    if os.environ.get("IDTS_AUTO_IMPORT_GEOGRAPHY", "true").lower() in ("1", "true", "yes"):
+        from app.add_geography import run as import_new_geography
+        try:
+            import_new_geography()
+        except FileNotFoundError:
+            pass  # no app/data/new_districts.json yet — nothing to import
     yield
 
 
