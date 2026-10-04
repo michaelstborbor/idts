@@ -213,89 +213,106 @@ function AggregateSection({ token, startDate, endDate }) {
 const LEVEL_LABELS = { country: "Country", district: "District", chiefdom: "Chiefdom", facility: "Facility" };
 
 function OrgUnitPicker({ token, role, onChange }) {
-  // What this role's cascade needs. Mirrors Admin > Create user's logic:
-  // facility_supervisor/facility_focal_person just pick ONE facility, from
-  // the list of facilities in their own chiefdom (fetched directly, no
-  // country/district/chiefdom steps needed since that chiefdom is fixed).
-  const needsFullPicker = ["system_admin", "national_user", "district_manager"].includes(role);
+  // What this role's filter cascade needs. Each role starts fixed at its
+  // own assigned level and may narrow further, down to one facility:
+  //   admin:               Country -> District -> Chiefdom -> Facility (all optional)
+  //   national_user:       Country fixed -> District -> Chiefdom -> Facility (all optional)
+  //   district_manager:    District fixed -> Chiefdom -> Facility (all optional)
+  //   facility_supervisor: Chiefdom fixed -> Facility (optional)
+  //   facility_focal_person: no picker at all — see the !needsAnyPicker branch below.
+  const needsAnyPicker = role !== "facility_focal_person";
   const needsCountry = role === "system_admin";
   const needsDistrict = role === "system_admin" || role === "national_user";
-  const needsChiefdom = needsFullPicker;
+  const needsChiefdom = role === "system_admin" || role === "national_user" || role === "district_manager";
+  // facility_supervisor's own chiefdom is fixed and fetched directly
+  // (no District step for them — same as their Create-user assignment).
 
   const [countries, setCountries] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [chiefdoms, setChiefdoms] = useState([]);
   const [facilities, setFacilities] = useState([]);
+  const [fixedFacility, setFixedFacility] = useState(null);
 
   const [countryId, setCountryId] = useState("");
   const [districtId, setDistrictId] = useState("");
   const [chiefdomId, setChiefdomId] = useState("");
   const [facilityId, setFacilityId] = useState("");
 
-  // Facility-level roles: just fetch their chiefdom's facility list once.
+  // facility_focal_person: fetch their one fixed facility and stop — no
+  // cascading UI, no filtering, per the access rules for this role.
   useEffect(() => {
-    if (needsFullPicker) return;
-    api.listFacilities(token, { forReports: true }).then(setFacilities).catch(() => {});
-  }, [needsFullPicker, token]);
+    if (role !== "facility_focal_person") return;
+    api.listFacilities(token).then((list) => { if (list[0]) setFixedFacility(list[0]); }).catch(() => {});
+  }, [role, token]);
 
-  // Admin / National Supervisor / District Manager: full cascade.
+  // Country: admin sees every country; national_user's own country is
+  // fetched directly and fixed.
   useEffect(() => {
-    if (!needsCountry) return;
-    api.listCountries(token).then((list) => {
-      setCountries(list);
-      if (list.length === 1) setCountryId(list[0].id);
-    }).catch(() => {});
-  }, [needsCountry, token]);
-
-  useEffect(() => {
-    if (!needsFullPicker) return;
-    if (role === "national_user" || role === "district_manager") {
-      // Their own country/district is fixed — ask the backend directly,
-      // it already returns just the one they're assigned to.
-      if (role === "national_user") {
-        api.listCountries(token).then((list) => { if (list[0]) setCountryId(list[0].id); }).catch(() => {});
-      }
-      api.listDistricts(token).then((list) => {
-        setDistricts(list);
-        if (list.length === 1) setDistrictId(list[0].id);
+    if (!needsAnyPicker) return;
+    if (role === "system_admin") {
+      api.listCountries(token).then((list) => {
+        setCountries(list);
+        if (list.length === 1) setCountryId(list[0].id);
       }).catch(() => {});
-    } else if (countryId) {
+    } else if (role === "national_user") {
+      api.listCountries(token).then((list) => { if (list[0]) setCountryId(list[0].id); }).catch(() => {});
+    }
+  }, [needsAnyPicker, role, token]);
+
+  // District: admin/national_user narrow from their country; district_manager's
+  // own district is fixed; facility_supervisor has no District step.
+  useEffect(() => {
+    if (!needsAnyPicker) return;
+    if (role === "district_manager") {
+      api.listDistricts(token).then((list) => { if (list[0]) setDistrictId(list[0].id); }).catch(() => {});
+    } else if (needsDistrict && countryId) {
       api.listDistricts(token, { countryId }).then(setDistricts).catch(() => {});
     }
-  }, [needsFullPicker, role, countryId, token]);
+  }, [needsAnyPicker, needsDistrict, role, countryId, token]);
 
+  // Chiefdom: within the fixed/chosen District for admin/national/district;
+  // facility_supervisor's own chiefdom is fetched directly and fixed.
   useEffect(() => {
-    if (!needsChiefdom || !districtId) { setChiefdoms([]); return; }
-    api.listChiefdoms(token, { districtId }).then(setChiefdoms).catch(() => {});
+    if (!needsAnyPicker) return;
     setChiefdomId(""); setFacilityId(""); setFacilities([]);
-  }, [needsChiefdom, districtId, token]);
+    if (role === "facility_supervisor") {
+      api.listChiefdoms(token).then((list) => { if (list[0]) setChiefdomId(list[0].id); }).catch(() => {});
+    } else if (needsChiefdom && districtId) {
+      api.listChiefdoms(token, { districtId }).then(setChiefdoms).catch(() => {});
+    } else {
+      setChiefdoms([]);
+    }
+  }, [needsAnyPicker, needsChiefdom, role, districtId, token]);
 
+  // Facility: an optional narrowing within the fixed/chosen Chiefdom, for
+  // every role that reaches this step.
   useEffect(() => {
-    if (!needsFullPicker || !chiefdomId) { if (needsFullPicker) setFacilities([]); return; }
-    api.listFacilities(token, { chiefdomId, forReports: true }).then(setFacilities).catch(() => {});
+    if (!needsAnyPicker || !chiefdomId) { setFacilities([]); return; }
+    api.listFacilities(token, { chiefdomId }).then(setFacilities).catch(() => {});
     setFacilityId("");
-  }, [needsFullPicker, chiefdomId, token]);
+  }, [needsAnyPicker, chiefdomId, token]);
 
-  // Tell the parent the deepest level actually chosen, since "and/or" means
-  // a user can stop at any level — Country alone, Country + District, etc.
   useEffect(() => {
+    if (!needsAnyPicker) {
+      if (fixedFacility) onChange({ level: "facility", unitId: fixedFacility.id, label: fixedFacility.name });
+      return;
+    }
     if (facilityId) return onChange({ level: "facility", unitId: facilityId });
     if (chiefdomId) return onChange({ level: "chiefdom", unitId: chiefdomId });
     if (districtId) return onChange({ level: "district", unitId: districtId });
     if (countryId) return onChange({ level: "country", unitId: countryId });
     onChange(null);
-  }, [countryId, districtId, chiefdomId, facilityId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needsAnyPicker, fixedFacility, countryId, districtId, chiefdomId, facilityId]);
 
-  if (!needsFullPicker) {
-    // facility_supervisor / facility_focal_person: one dropdown only.
+  if (!needsAnyPicker) {
     return (
-      <div>
-        <Label>Facility</Label>
-        <SelectInput value={facilityId} onChange={(e) => setFacilityId(e.target.value)}>
-          <option value="">Select a facility…</option>
-          {facilities.map((f) => <option key={f.id} value={f.id}>{f.name}{f.chiefdom ? ` — ${f.chiefdom}` : ""}</option>)}
-        </SelectInput>
-      </div>
+      <p style={{ fontSize: 14, color: COLORS.ink, margin: 0 }}>
+        <strong>Facility:</strong> {fixedFacility ? fixedFacility.name : "Loading…"}
+        <span style={{ display: "block", fontSize: 12, color: COLORS.muted, marginTop: 4 }}>
+          Your account is assigned to this one facility — no other data is available to filter in.
+        </span>
+      </p>
     );
   }
 
@@ -312,8 +329,8 @@ function OrgUnitPicker({ token, role, onChange }) {
       )}
       {needsDistrict && (role === "system_admin" ? countryId : true) && (
         <div>
-          <Label>District <span style={{ color: COLORS.muted, fontWeight: 400 }}>(optional — leave blank for the whole country)</span></Label>
-          <SelectInput value={districtId} onChange={(e) => setDistrictId(e.target.value)} disabled={role !== "system_admin" && districts.length <= 1}>
+          <Label>District <span style={{ color: COLORS.muted, fontWeight: 400 }}>(optional — leave blank for the whole {role === "national_user" ? "country" : "selection"})</span></Label>
+          <SelectInput value={districtId} onChange={(e) => setDistrictId(e.target.value)}>
             <option value="">All districts</option>
             {districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </SelectInput>

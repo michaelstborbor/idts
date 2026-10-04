@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { KeyRound, Trash2, UserPlus, UserX, UserCheck } from "lucide-react";
+import { KeyRound, Pencil, Trash2, UserPlus, UserX, UserCheck } from "lucide-react";
 import { api } from "../api/client.js";
 import { COLORS, CONTENT_MAX_WIDTH, facilityOptionLabel } from "../constants.js";
 import { ErrorText, Label, Modal, Pill, PrimaryButton, SecondaryButton, SelectInput, TextInput } from "../components/ui.jsx";
@@ -14,30 +14,39 @@ const ROLE_LABELS = {
   national_user: "National Supervisor",
 };
 const ROLES = Object.keys(ROLE_LABELS);
-// Who needs what: facility-level accounts see one facility, district managers one district.
-const FACILITY_ROLES = ["facility_focal_person", "vaccinator", "chw", "facility_supervisor"];
 const ACCESS_HINTS = {
-  facility_focal_person: "Dashboard/children: their own facility only. Reports: any facility in their own chiefdom.",
+  facility_focal_person: "Sees only their own facility's data — Dashboard, Children and Reports alike. No filtering.",
   vaccinator: "Sees only their own facility's data. No access to Reports.",
   chw: "Sees only their own facility's data. No access to Reports.",
-  facility_supervisor: "Dashboard/children: their own facility only. Reports: any facility in their own chiefdom.",
-  district_manager: "Sees all facilities in their assigned district, with reports by facility, user and chiefdom.",
-  national_user: "Sees all facilities in their assigned country, with reports by district, facility and user.",
+  facility_supervisor: "Sees every facility in their assigned chiefdom — Dashboard, Children and Reports alike.",
+  district_manager: "Sees every facility in their assigned district, with reports by facility, user and chiefdom.",
+  national_user: "Sees every facility in their assigned country, with reports by district, chiefdom, facility and user.",
   system_admin: "Sees everything and manages user accounts.",
 };
-// Roles whose account is ultimately tied to one facility (facility_id) —
-// the last step of every one of their cascades below.
-const ENDS_IN_FACILITY_ROLES = ["facility_focal_person", "vaccinator", "chw", "facility_supervisor"];
-// These three walk the full Country -> District -> Chiefdom -> Facility
-// path; facility_supervisor skips District (Country -> Chiefdom -> Facility),
-// by design — Facility Supervisors pick a chiefdom directly within a country.
-const FULL_PATH_ROLES = ["facility_focal_person", "vaccinator", "chw"];
+// Roles whose account ends at one FACILITY (facility_id) — the last step
+// of their cascade. Facility Supervisor is NOT here: their account is
+// assigned to a whole CHIEFDOM (geographic_area_id), one level up.
+const ENDS_IN_FACILITY_ROLES = ["facility_focal_person", "vaccinator", "chw"];
+// Roles whose account is assigned to a GEOGRAPHIC AREA (geographic_area_id)
+// rather than one facility: a country, a district, or — for Facility
+// Supervisor — a chiefdom.
+const ENDS_IN_AREA_ROLES = ["national_user", "district_manager", "facility_supervisor"];
 
-function CreateUserModal({ token, onCreated, onClose }) {
-  const [fullName, setFullName] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("chw");
+// ---------------------------------------------------------------------------
+// Shared cascading geography picker — Country -> District -> Chiefdom ->
+// Facility, shaped per role, used by both Create and Edit user. Lifts its
+// selected ids up to the parent via onChange so the parent builds the
+// final create/update payload.
+// ---------------------------------------------------------------------------
+function GeographyFields({ token, role, onChange }) {
+  const needsCountry = role !== "system_admin";
+  const needsDistrict = role === "district_manager" || ENDS_IN_FACILITY_ROLES.includes(role);
+  const needsChiefdom = role === "facility_supervisor" || ENDS_IN_FACILITY_ROLES.includes(role);
+  const needsFacility = ENDS_IN_FACILITY_ROLES.includes(role);
+  // Facility Supervisor's chiefdom list spans the whole country (no District
+  // step — their account ends AT the chiefdom); the facility-ending roles
+  // get chiefdoms within their one District.
+  const chiefdomsKeyedByCountry = role === "facility_supervisor";
 
   const [countries, setCountries] = useState([]);
   const [districts, setDistricts] = useState([]);
@@ -49,30 +58,11 @@ function CreateUserModal({ token, onCreated, onClose }) {
   const [chiefdomId, setChiefdomId] = useState("");
   const [facilityId, setFacilityId] = useState("");
 
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  // Which steps this role's cascade needs. system_admin needs none —
-  // every other role is assigned to a place somewhere in the geography
-  // tree, built so more countries/districts can be added later without
-  // changing this logic.
-  const needsCountry = role !== "system_admin";
-  const needsDistrict = role === "district_manager" || FULL_PATH_ROLES.includes(role);
-  const needsChiefdom = role === "facility_supervisor" || FULL_PATH_ROLES.includes(role);
-  const needsFacility = ENDS_IN_FACILITY_ROLES.includes(role);
-  // Facility Supervisor's chiefdom list spans the whole country (no District
-  // step); the three full-path roles get chiefdoms within their one District.
-  const chiefdomsKeyedByCountry = role === "facility_supervisor";
-
-  // Reset everything downstream whenever the role changes.
   useEffect(() => {
     setDistrictId(""); setChiefdomId(""); setFacilityId("");
     setDistricts([]); setChiefdoms([]); setFacilityOptions([]);
   }, [role]);
 
-  // Country list: fetched once, for any role that needs one. Only one
-  // country exists today, so it's auto-selected — the dropdown still
-  // shows so more countries can be added later without a code change.
   useEffect(() => {
     if (!needsCountry || countries.length > 0) return;
     api.listCountries(token).then((list) => {
@@ -81,7 +71,6 @@ function CreateUserModal({ token, onCreated, onClose }) {
     }).catch(() => {});
   }, [needsCountry, countries.length, token]);
 
-  // District list: only for roles that walk the full path.
   useEffect(() => {
     setDistrictId(""); setChiefdomId(""); setFacilityId(""); setChiefdoms([]); setFacilityOptions([]);
     if (needsDistrict && countryId) {
@@ -94,8 +83,6 @@ function CreateUserModal({ token, onCreated, onClose }) {
     }
   }, [needsDistrict, countryId, token]);
 
-  // Chiefdom list: within a District (most facility roles) or flat across
-  // the whole Country (Facility Supervisor — no District step for them).
   useEffect(() => {
     setChiefdomId(""); setFacilityId(""); setFacilityOptions([]);
     if (!needsChiefdom) { setChiefdoms([]); return; }
@@ -109,7 +96,6 @@ function CreateUserModal({ token, onCreated, onClose }) {
     }
   }, [needsChiefdom, chiefdomsKeyedByCountry, countryId, districtId, token]);
 
-  // Facility list: within the chosen Chiefdom.
   useEffect(() => {
     setFacilityId("");
     if (needsFacility && chiefdomId) {
@@ -119,13 +105,85 @@ function CreateUserModal({ token, onCreated, onClose }) {
     }
   }, [needsFacility, chiefdomId, token]);
 
+  useEffect(() => {
+    onChange({ countryId, districtId, chiefdomId, facilityId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [countryId, districtId, chiefdomId, facilityId]);
+
+  return (
+    <>
+      {needsCountry && (
+        <div>
+          <Label>Country</Label>
+          <SelectInput value={countryId} onChange={(e) => setCountryId(e.target.value)}>
+            <option value="">Select a country…</option>
+            {countries.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </SelectInput>
+        </div>
+      )}
+      {needsDistrict && countryId && (
+        <div>
+          <Label>District</Label>
+          <SelectInput value={districtId} onChange={(e) => setDistrictId(e.target.value)}>
+            <option value="">Select a district…</option>
+            {districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </SelectInput>
+        </div>
+      )}
+      {needsChiefdom && (chiefdomsKeyedByCountry ? countryId : districtId) && (
+        <div>
+          <Label>Chiefdom</Label>
+          <SelectInput value={chiefdomId} onChange={(e) => setChiefdomId(e.target.value)}>
+            <option value="">Select a chiefdom…</option>
+            {chiefdoms.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </SelectInput>
+        </div>
+      )}
+      {needsFacility && chiefdomId && (
+        <div>
+          <Label>Facility</Label>
+          <SelectInput value={facilityId} onChange={(e) => setFacilityId(e.target.value)}>
+            <option value="">Select a facility…</option>
+            {facilityOptions.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+          </SelectInput>
+        </div>
+      )}
+    </>
+  );
+}
+
+function geographyPayload(role, geo) {
+  return {
+    facility_id: ENDS_IN_FACILITY_ROLES.includes(role) ? geo.facilityId || null : null,
+    geographic_area_id: role === "district_manager" ? geo.districtId || null
+      : role === "national_user" ? geo.countryId || null
+      : role === "facility_supervisor" ? geo.chiefdomId || null
+      : null,
+  };
+}
+
+function geographyIsComplete(role, geo) {
+  if (role === "national_user") return !!geo.countryId;
+  if (role === "district_manager") return !!geo.districtId;
+  if (role === "facility_supervisor") return !!geo.chiefdomId;
+  if (ENDS_IN_FACILITY_ROLES.includes(role)) return !!geo.facilityId;
+  return true; // system_admin needs nothing
+}
+
+function CreateUserModal({ token, onCreated, onClose }) {
+  const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("chw");
+  const [geo, setGeo] = useState({ countryId: "", districtId: "", chiefdomId: "", facilityId: "" });
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
   async function submit() {
     if (!fullName.trim()) return setError("Enter the user's full name.");
     if (username.trim().length < 3) return setError("Username must be at least 3 characters.");
     if (password.length < 8) return setError("Password must be at least 8 characters.");
-    if (role === "national_user" && !countryId) return setError("Choose the country this account is assigned to.");
-    if (role === "district_manager" && !districtId) return setError("Choose the district this account manages.");
-    if (needsFacility && !facilityId) return setError("Choose the facility this account belongs to.");
+    if (!geographyIsComplete(role, geo)) return setError("Finish choosing where this account is assigned.");
     setError("");
     setSubmitting(true);
     try {
@@ -134,8 +192,7 @@ function CreateUserModal({ token, onCreated, onClose }) {
         username: username.trim(),
         password,
         role,
-        facility_id: needsFacility ? facilityId : null,
-        geographic_area_id: role === "district_manager" ? districtId : role === "national_user" ? countryId : null,
+        ...geographyPayload(role, geo),
       });
       onCreated(user);
     } catch (err) {
@@ -171,52 +228,86 @@ function CreateUserModal({ token, onCreated, onClose }) {
         </div>
         <p style={{ fontSize: 12, color: COLORS.muted, margin: "-8px 0 0" }}>{ACCESS_HINTS[role]}</p>
 
-        {needsCountry && (
-          <div>
-            <Label>Country</Label>
-            <SelectInput value={countryId} onChange={(e) => setCountryId(e.target.value)}>
-              <option value="">Select a country…</option>
-              {countries.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </SelectInput>
-          </div>
-        )}
-
-        {needsDistrict && countryId && (
-          <div>
-            <Label>District</Label>
-            <SelectInput value={districtId} onChange={(e) => setDistrictId(e.target.value)}>
-              <option value="">Select a district…</option>
-              {districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </SelectInput>
-          </div>
-        )}
-
-        {needsChiefdom && (chiefdomsKeyedByCountry ? countryId : districtId) && (
-          <div>
-            <Label>Chiefdom</Label>
-            <SelectInput value={chiefdomId} onChange={(e) => setChiefdomId(e.target.value)}>
-              <option value="">Select a chiefdom…</option>
-              {chiefdoms.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </SelectInput>
-          </div>
-        )}
-
-        {needsFacility && chiefdomId && (
-          <div>
-            <Label>Facility</Label>
-            <SelectInput value={facilityId} onChange={(e) => setFacilityId(e.target.value)}>
-              <option value="">Select a facility…</option>
-              {facilityOptions.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-            </SelectInput>
-          </div>
-        )}
+        <GeographyFields token={token} role={role} onChange={setGeo} />
 
         <ErrorText>{error}</ErrorText>
-
         <div style={{ display: "flex", gap: 12 }}>
           <SecondaryButton onClick={onClose} style={{ flex: 1 }}>Cancel</SecondaryButton>
           <PrimaryButton onClick={submit} disabled={submitting} style={{ flex: 1 }}>
             {submitting ? "Creating…" : "Create account"}
+          </PrimaryButton>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function EditUserModal({ token, user, onSaved, onClose }) {
+  const [fullName, setFullName] = useState(user.full_name);
+  const [role, setRole] = useState(user.role);
+  const [geo, setGeo] = useState({ countryId: "", districtId: "", chiefdomId: "", facilityId: "" });
+  const [touchedGeo, setTouchedGeo] = useState(false);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  // The picker below starts empty, even on a role this user already has —
+  // re-pick the assignment rather than trying to guess it back from the
+  // current facility/area id. Current assignment is shown as plain text
+  // above the picker for reference while you do.
+  function handleGeoChange(next) {
+    setTouchedGeo(true);
+    setGeo(next);
+  }
+
+  async function submit() {
+    if (!fullName.trim()) return setError("Full name can't be empty.");
+    const roleChanged = role !== user.role;
+    if (roleChanged && !geographyIsComplete(role, geo)) {
+      return setError("Finish choosing where this account is now assigned.");
+    }
+    setError("");
+    setSubmitting(true);
+    try {
+      const payload = { full_name: fullName.trim(), role };
+      if (roleChanged || touchedGeo) {
+        Object.assign(payload, geographyPayload(role, geo));
+      }
+      const updated = await api.updateUser(token, user.id, payload);
+      onSaved(updated);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title={`Edit — ${user.full_name}`} onClose={onClose}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div>
+          <Label>Full name</Label>
+          <TextInput value={fullName} onChange={(e) => setFullName(e.target.value)} />
+        </div>
+        <div>
+          <Label>Role</Label>
+          <SelectInput value={role} onChange={(e) => { setRole(e.target.value); setTouchedGeo(false); }}>
+            {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+          </SelectInput>
+        </div>
+        <p style={{ fontSize: 12, color: COLORS.muted, margin: "-8px 0 0" }}>{ACCESS_HINTS[role]}</p>
+
+        <div style={{ padding: "10px 12px", borderRadius: 8, backgroundColor: COLORS.subtleBg, fontSize: 13, color: COLORS.muted }}>
+          Current assignment: <strong style={{ color: COLORS.ink }}>{user.current_assignment_label || "—"}</strong>.
+          {ROLES.includes(role) && role !== "system_admin" ? " To change it, pick a new one below." : ""}
+        </div>
+
+        {role !== "system_admin" && <GeographyFields token={token} role={role} onChange={handleGeoChange} />}
+
+        <ErrorText>{error}</ErrorText>
+        <div style={{ display: "flex", gap: 12 }}>
+          <SecondaryButton onClick={onClose} style={{ flex: 1 }}>Cancel</SecondaryButton>
+          <PrimaryButton onClick={submit} disabled={submitting} style={{ flex: 1 }}>
+            {submitting ? "Saving…" : "Save changes"}
           </PrimaryButton>
         </div>
       </div>
@@ -299,7 +390,9 @@ export default function AdminPage({ token, facilities, currentUserId }) {
   const [togglingId, setTogglingId] = useState(null);
   const [removingId, setRemovingId] = useState(null);
   const [resetTarget, setResetTarget] = useState(null);
+  const [editTarget, setEditTarget] = useState(null);
   const [districts, setDistricts] = useState([]);
+  const [chiefdoms, setChiefdoms] = useState([]);
 
   async function load() {
     setLoading(true);
@@ -316,6 +409,7 @@ export default function AdminPage({ token, facilities, currentUserId }) {
 
   useEffect(() => { load(); }, [token]);
   useEffect(() => { api.listDistricts(token).then(setDistricts).catch(() => {}); }, [token]);
+  useEffect(() => { api.listChiefdoms(token).then(setChiefdoms).catch(() => {}); }, [token]);
 
   async function toggleActive(user) {
     setTogglingId(user.id);
@@ -350,7 +444,16 @@ export default function AdminPage({ token, facilities, currentUserId }) {
     const f = facilities.find((fac) => fac.id === id);
     return f ? facilityOptionLabel(f) : undefined;
   };
-  const districtName = (id) => districts.find((d) => d.id === id)?.name;
+  // geographic_area_id can be a country, a district, or (Facility Supervisor)
+  // a chiefdom — check all three lists rather than assuming which.
+  const areaName = (id) => districts.find((d) => d.id === id)?.name || chiefdoms.find((c) => c.id === id)?.name;
+
+  function assignmentLabel(u) {
+    if (u.role === "system_admin") return "Everything";
+    if (u.facility_id) return facilityName(u.facility_id) || "Unknown facility";
+    if (u.geographic_area_id) return areaName(u.geographic_area_id) || "Unknown area";
+    return "Not assigned";
+  }
 
   return (
     <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto" }}>
@@ -385,48 +488,58 @@ export default function AdminPage({ token, facilities, currentUserId }) {
                   {u.id === currentUserId && <span style={{ marginLeft: 6 }}><Pill label="You" color="#6B6660" bg="#EDEBE6" /></span>}
                 </p>
                 <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 2 }}>
-                  {ROLE_LABELS[u.role] || u.role}
-                  {u.facility_id ? ` · ${facilityName(u.facility_id) || "Unknown facility"}` : ""}
-                  {u.geographic_area_id ? ` · ${districtName(u.geographic_area_id) || "Unknown district"}` : ""}
+                  {ROLE_LABELS[u.role] || u.role} · {assignmentLabel(u)}
                   {!u.is_active ? " · Deactivated" : ""}
                 </p>
               </div>
-              {u.id !== currentUserId && (
-                <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                  <button
-                    onClick={() => toggleActive(u)}
-                    disabled={togglingId === u.id || removingId === u.id}
-                    title={u.is_active ? "Deactivate" : "Reactivate"}
-                    style={{
-                      padding: 8, borderRadius: 8, border: `1px solid ${u.is_active ? "#F6D9D2" : COLORS.inputBorder}`,
-                      backgroundColor: u.is_active ? "#FBE9E4" : COLORS.subtleBg, cursor: "pointer", display: "flex", flexShrink: 0,
-                    }}
-                  >
-                    {u.is_active ? <UserX size={15} color="#8C2E1C" /> : <UserCheck size={15} color={COLORS.ink} />}
-                  </button>
-                  <button
-                    onClick={() => setResetTarget(u)}
-                    title="Reset password"
-                    style={{
-                      padding: 8, borderRadius: 8, border: `1px solid ${COLORS.inputBorder}`, backgroundColor: COLORS.subtleBg,
-                      cursor: "pointer", display: "flex", flexShrink: 0,
-                    }}
-                  >
-                    <KeyRound size={15} color={COLORS.ink} />
-                  </button>
-                  <button
-                    onClick={() => removeUser(u)}
-                    disabled={togglingId === u.id || removingId === u.id}
-                    title="Remove permanently"
-                    style={{
-                      padding: 8, borderRadius: 8, border: "1px solid #F6D9D2", backgroundColor: "#FBE9E4",
-                      cursor: "pointer", display: "flex", flexShrink: 0,
-                    }}
-                  >
-                    <Trash2 size={15} color="#8C2E1C" />
-                  </button>
-                </div>
-              )}
+              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                <button
+                  onClick={() => setEditTarget({ ...u, current_assignment_label: assignmentLabel(u) })}
+                  title="Edit"
+                  style={{
+                    padding: 8, borderRadius: 8, border: `1px solid ${COLORS.inputBorder}`, backgroundColor: COLORS.subtleBg,
+                    cursor: "pointer", display: "flex", flexShrink: 0,
+                  }}
+                >
+                  <Pencil size={15} color={COLORS.ink} />
+                </button>
+                {u.id !== currentUserId && (
+                  <>
+                    <button
+                      onClick={() => toggleActive(u)}
+                      disabled={togglingId === u.id || removingId === u.id}
+                      title={u.is_active ? "Deactivate" : "Reactivate"}
+                      style={{
+                        padding: 8, borderRadius: 8, border: `1px solid ${u.is_active ? "#F6D9D2" : COLORS.inputBorder}`,
+                        backgroundColor: u.is_active ? "#FBE9E4" : COLORS.subtleBg, cursor: "pointer", display: "flex", flexShrink: 0,
+                      }}
+                    >
+                      {u.is_active ? <UserX size={15} color="#8C2E1C" /> : <UserCheck size={15} color={COLORS.ink} />}
+                    </button>
+                    <button
+                      onClick={() => setResetTarget(u)}
+                      title="Reset password"
+                      style={{
+                        padding: 8, borderRadius: 8, border: `1px solid ${COLORS.inputBorder}`, backgroundColor: COLORS.subtleBg,
+                        cursor: "pointer", display: "flex", flexShrink: 0,
+                      }}
+                    >
+                      <KeyRound size={15} color={COLORS.ink} />
+                    </button>
+                    <button
+                      onClick={() => removeUser(u)}
+                      disabled={togglingId === u.id || removingId === u.id}
+                      title="Remove permanently"
+                      style={{
+                        padding: 8, borderRadius: 8, border: "1px solid #F6D9D2", backgroundColor: "#FBE9E4",
+                        cursor: "pointer", display: "flex", flexShrink: 0,
+                      }}
+                    >
+                      <Trash2 size={15} color="#8C2E1C" />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -434,6 +547,15 @@ export default function AdminPage({ token, facilities, currentUserId }) {
 
       {resetTarget && (
         <ResetPasswordModal token={token} user={resetTarget} onClose={() => setResetTarget(null)} />
+      )}
+
+      {editTarget && (
+        <EditUserModal
+          token={token}
+          user={editTarget}
+          onSaved={() => { setEditTarget(null); load(); }}
+          onClose={() => setEditTarget(null)}
+        />
       )}
 
       {showCreate && (

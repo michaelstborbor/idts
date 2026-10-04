@@ -1,7 +1,136 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { api } from "../api/client.js";
-import { COLORS, facilityOptionLabel, groupFacilitiesByDistrict } from "../constants.js";
+import { COLORS } from "../constants.js";
 import { ErrorText, Label, PrimaryButton, SecondaryButton, SelectInput, TextInput } from "../components/ui.jsx";
+
+// ---------------------------------------------------------------------------
+// Cascading facility picker, scoped to the LOGGED-IN user's own access
+// level — not an admin picking for someone else (see AdminPage's
+// GeographyFields for that case). Each role starts fixed at its own
+// assigned level and must choose all the way down to one Facility:
+//   system_admin:          Country -> District -> Chiefdom -> Facility
+//   national_user:         Country fixed -> District -> Chiefdom -> Facility
+//   district_manager:      District fixed -> Chiefdom -> Facility
+//   facility_supervisor:   Chiefdom fixed -> Facility
+//   facility_focal_person / vaccinator / chw: their one facility, fixed —
+//     no picker at all, since there's nothing else to choose from.
+// ---------------------------------------------------------------------------
+function FacilityPicker({ token, role, value, onChange }) {
+  const isFixedFacility = role === "facility_focal_person" || role === "vaccinator" || role === "chw";
+  const needsDistrictStep = role === "system_admin" || role === "national_user" || role === "district_manager";
+  const needsChiefdomStep = role === "system_admin" || role === "national_user" || role === "district_manager" || role === "facility_supervisor";
+
+  const [countries, setCountries] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [chiefdoms, setChiefdoms] = useState([]);
+  const [facilities, setFacilities] = useState([]);
+  const [fixedFacility, setFixedFacility] = useState(null);
+
+  const [countryId, setCountryId] = useState("");
+  const [districtId, setDistrictId] = useState("");
+  const [chiefdomId, setChiefdomId] = useState("");
+
+  useEffect(() => {
+    if (!isFixedFacility) return;
+    api.listFacilities(token).then((list) => { if (list[0]) { setFixedFacility(list[0]); onChange(list[0].id); } }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFixedFacility, token]);
+
+  useEffect(() => {
+    if (isFixedFacility) return;
+    if (role === "system_admin") {
+      api.listCountries(token).then((list) => {
+        setCountries(list);
+        if (list.length === 1) setCountryId(list[0].id);
+      }).catch(() => {});
+    } else if (role === "national_user") {
+      api.listCountries(token).then((list) => { if (list[0]) setCountryId(list[0].id); }).catch(() => {});
+    }
+  }, [isFixedFacility, role, token]);
+
+  useEffect(() => {
+    if (isFixedFacility) return;
+    if (role === "district_manager") {
+      api.listDistricts(token).then((list) => { if (list[0]) setDistrictId(list[0].id); }).catch(() => {});
+    } else if (needsDistrictStep && countryId) {
+      api.listDistricts(token, { countryId }).then(setDistricts).catch(() => {});
+    }
+  }, [isFixedFacility, needsDistrictStep, role, countryId, token]);
+
+  useEffect(() => {
+    if (isFixedFacility) return;
+    setChiefdomId(""); setFacilities([]); onChange("");
+    if (role === "facility_supervisor") {
+      api.listChiefdoms(token).then((list) => { if (list[0]) setChiefdomId(list[0].id); }).catch(() => {});
+    } else if (needsChiefdomStep && districtId) {
+      api.listChiefdoms(token, { districtId }).then(setChiefdoms).catch(() => {});
+    } else {
+      setChiefdoms([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFixedFacility, needsChiefdomStep, role, districtId, token]);
+
+  useEffect(() => {
+    if (isFixedFacility || !chiefdomId) return;
+    api.listFacilities(token, { chiefdomId }).then((list) => {
+      setFacilities(list);
+      if (list.length === 1) onChange(list[0].id);
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFixedFacility, chiefdomId, token]);
+
+  if (isFixedFacility) {
+    return (
+      <div>
+        <Label>Facility</Label>
+        <p style={{ fontSize: 14, color: COLORS.ink, padding: "10px 12px", borderRadius: 8, backgroundColor: COLORS.subtleBg, margin: 0 }}>
+          {fixedFacility ? fixedFacility.name : "Loading…"}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {role === "system_admin" && (
+        <div>
+          <Label>Country</Label>
+          <SelectInput value={countryId} onChange={(e) => setCountryId(e.target.value)}>
+            <option value="">Select a country…</option>
+            {countries.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </SelectInput>
+        </div>
+      )}
+      {needsDistrictStep && (role === "system_admin" ? countryId : true) && (
+        <div>
+          <Label>District</Label>
+          <SelectInput value={districtId} onChange={(e) => setDistrictId(e.target.value)}>
+            <option value="">Select a district…</option>
+            {districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </SelectInput>
+        </div>
+      )}
+      {needsChiefdomStep && districtId && (
+        <div>
+          <Label>Chiefdom</Label>
+          <SelectInput value={chiefdomId} onChange={(e) => setChiefdomId(e.target.value)}>
+            <option value="">Select a chiefdom…</option>
+            {chiefdoms.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </SelectInput>
+        </div>
+      )}
+      {chiefdomId && (
+        <div>
+          <Label>Facility</Label>
+          <SelectInput value={value} onChange={(e) => onChange(e.target.value)}>
+            <option value="">Select a facility…</option>
+            {facilities.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+          </SelectInput>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * Shared form for both registering a new child and editing an existing
@@ -12,13 +141,13 @@ import { ErrorText, Label, PrimaryButton, SecondaryButton, SelectInput, TextInpu
  * and skips duplicate-checking (the child already exists; checking for
  * duplicates of an existing record doesn't make sense).
  */
-export default function ChildForm({ token, facilities, mode = "create", initialChild, onSaved, onCancel }) {
+export default function ChildForm({ token, currentUser, mode = "create", initialChild, onSaved, onCancel }) {
   const isEdit = mode === "edit";
 
   const [name, setName] = useState(initialChild?.full_name || "");
   const [sex, setSex] = useState(initialChild?.sex || "F");
   const [dob, setDob] = useState(initialChild?.dob || "");
-  const [facilityId, setFacilityId] = useState(initialChild?.facility_id || facilities[0]?.id || "");
+  const [facilityId, setFacilityId] = useState(initialChild?.facility_id || "");
   const [address, setAddress] = useState(initialChild?.address || "");
   const [caregiverName, setCaregiverName] = useState(initialChild?.caregiver_name || "");
   const [caregiverPhone, setCaregiverPhone] = useState(initialChild?.caregiver_phone || "");
@@ -131,16 +260,7 @@ export default function ChildForm({ token, facilities, mode = "create", initialC
         </div>
 
         {!isEdit && (
-          <div>
-            <Label>Facility</Label>
-            <SelectInput value={facilityId} onChange={(e) => setFacilityId(e.target.value)}>
-              {groupFacilitiesByDistrict(facilities).map(([district, facs]) => (
-                <optgroup key={district} label={district}>
-                  {facs.map((f) => <option key={f.id} value={f.id}>{facilityOptionLabel(f)}</option>)}
-                </optgroup>
-              ))}
-            </SelectInput>
-          </div>
+          <FacilityPicker token={token} role={currentUser.role} value={facilityId} onChange={setFacilityId} />
         )}
 
         <div>
