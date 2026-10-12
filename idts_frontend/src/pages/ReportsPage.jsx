@@ -9,8 +9,8 @@ function sessionLabel(value) {
 }
 
 function toCsv(rows, startDate, endDate) {
-  const header = "Antigen,Session Type,Doses Given\n";
-  const body = rows.map((r) => `"${r.antigen}","${sessionLabel(r.session_type)}",${r.count}`).join("\n");
+  const header = "Antigen,Dose,Session Type,Doses Given\n";
+  const body = rows.map((r) => `"${r.antigen}",${r.dose_number},"${sessionLabel(r.session_type)}",${r.count}`).join("\n");
   const meta = `Report period,${startDate || "all time"} to ${endDate || "present"}\n\n`;
   return meta + header + body + "\n";
 }
@@ -39,12 +39,12 @@ function aggregateToCsv(report) {
   const isUser = report.group_by === "user";
   const header = isUser
     ? "Name,Details,Doses recorded,Tracing attempts,Cases assigned"
-    : "Name,Details,Children registered,Fully immunized (FIC),Need attention,Doses given,Open cases,Cases returned";
+    : "Name,Details,Children registered,Fully immunized (FIC),Need attention,Doses given,Open cases,Cases returned,AEFI";
   const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const line = (r) =>
     isUser
       ? [q(r.label), q(r.sublabel), r.doses_given, r.tracing_attempts ?? 0, r.cases_assigned ?? 0].join(",")
-      : [q(r.label), q(r.sublabel), r.registered ?? 0, r.fully_immunized ?? 0, r.needs_attention ?? 0, r.doses_given, r.cases_open ?? 0, r.cases_returned ?? 0].join(",");
+      : [q(r.label), q(r.sublabel), r.registered ?? 0, r.fully_immunized ?? 0, r.needs_attention ?? 0, r.doses_given, r.cases_open ?? 0, r.cases_returned ?? 0, r.aefi_events ?? 0].join(",");
   const meta = `Scope,${q(report.scope_label)}\nBreakdown,${report.group_by}\nPeriod,${report.start_date || "all time"} to ${report.end_date || "present"}\n\n`;
   return meta + header + "\n" + [...report.rows, report.totals].map(line).join("\n") + "\n";
 }
@@ -146,6 +146,7 @@ function AggregateSection({ token, startDate, endDate }) {
                       <th style={th}>Need attention</th>
                       <th style={th}>Doses given</th>
                       <th style={th}>Open cases</th>
+                      <th style={th}>AEFI</th>
                     </>
                   )}
                 </tr>
@@ -170,6 +171,7 @@ function AggregateSection({ token, startDate, endDate }) {
                         <td style={td}>{r.needs_attention ?? 0}</td>
                         <td style={td}>{r.doses_given}</td>
                         <td style={td}>{r.cases_open ?? 0}</td>
+                        <td style={td}>{r.aefi_events ?? 0}</td>
                       </>
                     )}
                   </tr>
@@ -191,6 +193,7 @@ function AggregateSection({ token, startDate, endDate }) {
                       <td style={tdTotal}>{report.totals.needs_attention ?? 0}</td>
                       <td style={tdTotal}>{report.totals.doses_given}</td>
                       <td style={tdTotal}>{report.totals.cases_open ?? 0}</td>
+                      <td style={tdTotal}>{report.totals.aefi_events ?? 0}</td>
                     </>
                   )}
                 </tr>
@@ -361,9 +364,18 @@ function OrgUnitPicker({ token, role, onChange }) {
 function generatedReportToCsv(report) {
   const meta = `Organizational unit,${report.unit_level} — ${report.unit_name}\nVaccines,${report.vaccines_included.join("; ")}\nPeriod,${report.start_date || "all time"} to ${report.end_date || "present"}\n\n`;
   const summary = `Children registered,${report.registered}\nFully immunized (FIC),${report.fully_immunized}\nNeed attention,${report.needs_attention}\nDoses given (total),${report.doses_given_total}\nOpen cases,${report.cases_open}\nCases returned to service,${report.cases_returned}\n\n`;
-  const header = "Vaccine,Doses given\n";
-  const body = report.doses_by_vaccine.map((r) => `"${r.antigen}",${r.doses_given}`).join("\n");
-  return meta + summary + header + body + "\n";
+  const header = "Vaccine,Dose,Doses given\n";
+  const body = (report.doses_by_dose || []).map((r) => `"${r.antigen}",${r.dose_number},${r.doses_given}`).join("\n");
+  const a = report.aefi || {};
+  const aefiSummary =
+    `\n\nAdverse events following immunization (onset in period)\nTotal,${a.total ?? 0}\nMild,${a.mild ?? 0}\nModerate,${a.moderate ?? 0}\nSevere,${a.severe ?? 0}\nSerious,${a.serious ?? 0}\nSerious - report not yet sent,${a.serious_awaiting_report ?? 0}\n`;
+  const byType = (a.by_event_type || []).length
+    ? "\nEvent type,Count\n" + a.by_event_type.map((r) => `"${r.label}",${r.count}`).join("\n") + "\n"
+    : "";
+  const byAntigen = (a.by_antigen || []).length
+    ? "\nAntigen,AEFI linked\n" + a.by_antigen.map((r) => `"${r.antigen}",${r.count}`).join("\n") + "\n"
+    : "";
+  return meta + summary + header + body + aefiSummary + byType + byAntigen;
 }
 
 function GeneratedReportSection({ token, role }) {
@@ -498,23 +510,82 @@ function GeneratedReportSection({ token, role }) {
               </div>
             ))}
           </div>
-          {report.doses_by_vaccine.length > 0 && (
+          {(report.doses_by_dose || []).length > 0 && (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
               <thead>
                 <tr style={{ backgroundColor: COLORS.subtleBg }}>
-                  <th style={{ textAlign: "left", padding: "10px 14px", color: COLORS.ink, fontWeight: 600, borderTop: `1px solid ${COLORS.border}` }}>Vaccine</th>
+                  <th style={{ textAlign: "left", padding: "10px 14px", color: COLORS.ink, fontWeight: 600, borderTop: `1px solid ${COLORS.border}` }}>Vaccine / dose</th>
                   <th style={{ textAlign: "right", padding: "10px 14px", color: COLORS.ink, fontWeight: 600, borderTop: `1px solid ${COLORS.border}` }}>Doses given</th>
                 </tr>
               </thead>
               <tbody>
-                {report.doses_by_vaccine.map((r, i) => (
-                  <tr key={r.antigen} style={{ borderTop: i === 0 ? "none" : `1px solid ${COLORS.border}` }}>
-                    <td style={{ padding: "10px 14px", color: COLORS.ink }}>{r.antigen}</td>
-                    <td style={statRow}>{r.doses_given}</td>
-                  </tr>
+                {report.doses_by_vaccine.map((v, i) => (
+                  <React.Fragment key={v.antigen}>
+                    <tr style={{ borderTop: i === 0 ? "none" : `1px solid ${COLORS.border}`, backgroundColor: COLORS.subtleBg }}>
+                      <td style={{ padding: "8px 14px", color: COLORS.ink, fontWeight: 600 }}>{v.antigen}</td>
+                      <td style={{ ...statRow, color: COLORS.ink, fontWeight: 600 }}>{v.doses_given}</td>
+                    </tr>
+                    {report.doses_by_dose.filter((d) => d.antigen === v.antigen).map((d) => (
+                      <tr key={`${d.antigen}|${d.dose_number}`} style={{ borderTop: `1px solid ${COLORS.border}` }}>
+                        <td style={{ padding: "8px 14px 8px 30px", color: COLORS.ink }}>Dose {d.dose_number}</td>
+                        <td style={statRow}>{d.doses_given}</td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
+          )}
+
+          {report.aefi && (
+            <div style={{ borderTop: `1px solid ${COLORS.border}` }}>
+              <div style={{ padding: "12px 20px", backgroundColor: COLORS.subtleBg }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.ink, margin: 0 }}>Adverse events following immunization (AEFI)</p>
+                <p style={{ fontSize: 12, color: COLORS.muted, margin: "2px 0 0" }}>
+                  Events with onset in this period{report.vaccines_included[0] === "All vaccines" ? "" : ", linked to the selected vaccines"}.
+                </p>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1, backgroundColor: COLORS.border }}>
+                {[
+                  ["AEFI recorded", report.aefi.total],
+                  ["Mild", report.aefi.mild],
+                  ["Moderate", report.aefi.moderate],
+                  ["Severe", report.aefi.severe],
+                  ["Serious", report.aefi.serious],
+                  ["Serious, report not yet sent", report.aefi.serious_awaiting_report],
+                ].map(([label, value]) => (
+                  <div key={label} style={{ backgroundColor: COLORS.white, padding: "14px 16px" }}>
+                    <p style={{ fontSize: 20, fontWeight: 600, margin: 0, color: COLORS.ink }}>{value}</p>
+                    <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 2 }}>{label}</p>
+                  </div>
+                ))}
+              </div>
+              {report.aefi.by_event_type.length > 0 && (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                  <thead>
+                    <tr style={{ backgroundColor: COLORS.subtleBg }}>
+                      <th style={{ textAlign: "left", padding: "10px 14px", color: COLORS.ink, fontWeight: 600, borderTop: `1px solid ${COLORS.border}` }}>Event type</th>
+                      <th style={{ textAlign: "right", padding: "10px 14px", color: COLORS.ink, fontWeight: 600, borderTop: `1px solid ${COLORS.border}` }}>Cases</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.aefi.by_event_type.map((r) => (
+                      <tr key={r.event_type} style={{ borderTop: `1px solid ${COLORS.border}` }}>
+                        <td style={{ padding: "8px 14px", color: COLORS.ink }}>{r.label}</td>
+                        <td style={statRow}>{r.count}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {report.aefi.by_antigen.length > 0 && (
+                <p style={{ fontSize: 13, color: COLORS.muted, margin: 0, padding: "12px 20px", borderTop: `1px solid ${COLORS.border}`, lineHeight: 1.6 }}>
+                  <strong style={{ color: COLORS.ink }}>By vaccine:</strong>{" "}
+                  {report.aefi.by_antigen.map((r) => `${r.antigen} (${r.count})`).join(", ")}.
+                  {" "}An event linked to two vaccines is counted once in the totals and once under each vaccine.
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -552,11 +623,14 @@ export default function ReportsPage({ token, currentUser }) {
     downloadCsv(csv, `idts-vaccinations-summary-${stamp}.csv`);
   }
 
-  // Pivot rows into an antigen x session-type table for easier on-screen reading
+  // Pivot rows into an (antigen + dose) x session-type table for easier on-screen reading
   const sessionTypeValues = SESSION_TYPES.map((s) => s.value);
-  const antigens = report ? Array.from(new Set(report.rows.map((r) => r.antigen))).sort() : [];
-  const countFor = (antigen, sessionType) =>
-    report?.rows.find((r) => r.antigen === antigen && r.session_type === sessionType)?.count || 0;
+  const doseRows = report
+    ? Array.from(new Map(report.rows.map((r) => [`${r.antigen}|${r.dose_number}`, { antigen: r.antigen, dose: r.dose_number }])).values())
+        .sort((a, b) => a.antigen.localeCompare(b.antigen) || a.dose - b.dose)
+    : [];
+  const countFor = (antigen, dose, sessionType) =>
+    report?.rows.find((r) => r.antigen === antigen && r.dose_number === dose && r.session_type === sessionType)?.count || 0;
 
   return (
     <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto" }}>
@@ -595,7 +669,7 @@ export default function ReportsPage({ token, currentUser }) {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
               <thead>
                 <tr style={{ backgroundColor: COLORS.subtleBg }}>
-                  <th style={{ textAlign: "left", padding: "10px 14px", color: COLORS.ink, fontWeight: 600, borderBottom: `1px solid ${COLORS.border}` }}>Antigen</th>
+                  <th style={{ textAlign: "left", padding: "10px 14px", color: COLORS.ink, fontWeight: 600, borderBottom: `1px solid ${COLORS.border}` }}>Antigen / dose</th>
                   {sessionTypeValues.map((sv) => (
                     <th key={sv} style={{ textAlign: "right", padding: "10px 14px", color: COLORS.ink, fontWeight: 600, borderBottom: `1px solid ${COLORS.border}` }}>
                       {sessionLabel(sv)}
@@ -605,13 +679,13 @@ export default function ReportsPage({ token, currentUser }) {
                 </tr>
               </thead>
               <tbody>
-                {antigens.map((antigen, i) => {
-                  const rowTotal = sessionTypeValues.reduce((sum, sv) => sum + countFor(antigen, sv), 0);
+                {doseRows.map((dr, i) => {
+                  const rowTotal = sessionTypeValues.reduce((sum, sv) => sum + countFor(dr.antigen, dr.dose, sv), 0);
                   return (
-                    <tr key={antigen} style={{ borderTop: i === 0 ? "none" : `1px solid ${COLORS.border}` }}>
-                      <td style={{ padding: "10px 14px", color: COLORS.ink }}>{antigen}</td>
+                    <tr key={`${dr.antigen}|${dr.dose}`} style={{ borderTop: i === 0 ? "none" : `1px solid ${COLORS.border}` }}>
+                      <td style={{ padding: "10px 14px", color: COLORS.ink }}>{dr.antigen} <span style={{ color: COLORS.muted }}>— dose {dr.dose}</span></td>
                       {sessionTypeValues.map((sv) => (
-                        <td key={sv} style={{ padding: "10px 14px", textAlign: "right", color: COLORS.muted }}>{countFor(antigen, sv)}</td>
+                        <td key={sv} style={{ padding: "10px 14px", textAlign: "right", color: COLORS.muted }}>{countFor(dr.antigen, dr.dose, sv)}</td>
                       ))}
                       <td style={{ padding: "10px 14px", textAlign: "right", color: COLORS.ink, fontWeight: 500 }}>{rowTotal}</td>
                     </tr>
@@ -622,7 +696,7 @@ export default function ReportsPage({ token, currentUser }) {
                 <tr style={{ borderTop: `1px solid ${COLORS.border}`, backgroundColor: COLORS.subtleBg }}>
                   <td style={{ padding: "10px 14px", fontWeight: 600, color: COLORS.ink }}>Total</td>
                   {sessionTypeValues.map((sv) => {
-                    const colTotal = antigens.reduce((sum, a) => sum + countFor(a, sv), 0);
+                    const colTotal = doseRows.reduce((sum, dr) => sum + countFor(dr.antigen, dr.dose, sv), 0);
                     return <td key={sv} style={{ padding: "10px 14px", textAlign: "right", fontWeight: 600, color: COLORS.ink }}>{colTotal}</td>;
                   })}
                   <td style={{ padding: "10px 14px", textAlign: "right", fontWeight: 700, color: COLORS.ink }}>{report.total_doses}</td>

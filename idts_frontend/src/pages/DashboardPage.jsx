@@ -70,6 +70,13 @@ export default function DashboardPage({ token, childrenCount }) {
     { status: "fully_immunized", label: "Fully immunized (FIC)", count: stats.fully_immunized },
   ];
 
+  const aefiBySeverity = stats.aefi_by_severity || { mild: 0, moderate: 0, severe: 0 };
+  const aefiChartData = [
+    { key: "mild", label: "Mild", count: aefiBySeverity.mild || 0, color: "#2F6B4F" },
+    { key: "moderate", label: "Moderate", count: aefiBySeverity.moderate || 0, color: "#C99A2E" },
+    { key: "severe", label: "Severe", count: aefiBySeverity.severe || 0, color: "#B4472F" },
+  ];
+
   return (
     <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto" }}>
       {stats.scope_label && (
@@ -112,6 +119,37 @@ export default function DashboardPage({ token, childrenCount }) {
         merely that nothing is currently due for their age. A young infant correctly cannot be FIC
         yet even if nothing of theirs is overdue; "Need attention now" (age-relative) is a separate,
         operational measure for who needs a visit soon.
+      </p>
+
+      <h3 style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6B6660", margin: "32px 0 12px" }}>
+        Adverse events following immunization (AEFI)
+      </h3>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 16 }}>
+        <SummaryCard label="AEFI recorded" value={stats.aefi_total ?? 0} />
+        <SummaryCard label="Serious AEFI" value={stats.aefi_serious ?? 0} color="#B4472F" />
+        <SummaryCard label="Serious, report not yet sent" value={stats.aefi_serious_awaiting_report ?? 0} color={(stats.aefi_serious_awaiting_report ?? 0) > 0 ? "#B4472F" : "#2F6B4F"} />
+      </div>
+      <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, padding: 16, backgroundColor: COLORS.white }}>
+        {(stats.aefi_total ?? 0) === 0 ? (
+          <p style={{ fontSize: 14, color: COLORS.muted, textAlign: "center", padding: "20px 0", margin: 0 }}>No adverse events recorded yet.</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={aefiChartData} margin={{ top: 8, right: 12, left: -12, bottom: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6B6660" }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#6B6660" }} />
+              <Tooltip cursor={{ fill: COLORS.subtleBg }} contentStyle={{ borderRadius: 8, borderColor: COLORS.border, fontSize: 13 }} />
+              <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                {aefiChartData.map((d) => <Cell key={d.key} fill={d.color} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+      <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 12, lineHeight: 1.6 }}>
+        Mild / moderate / severe describes how intense an event was. <strong>Serious</strong> is a separate
+        WHO measure based on outcome (death, life-threatening, hospitalization, disability…) — serious events
+        must be reported within 24 hours.
       </p>
     </div>
   );
