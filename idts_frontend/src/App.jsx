@@ -12,6 +12,7 @@ import DashboardPage from "./pages/DashboardPage.jsx";
 import AdminPage from "./pages/AdminPage.jsx";
 import AccountSettingsPage from "./pages/AccountSettingsPage.jsx";
 import ReportsPage from "./pages/ReportsPage.jsx";
+import AefiPage from "./pages/AefiPage.jsx";
 import AssignCaseModal from "./components/AssignCaseModal.jsx";
 import CaseDetailModal from "./components/CaseDetailModal.jsx";
 
@@ -20,11 +21,12 @@ const BASE_NAV_TABS = [
   { value: "list", label: "All children" },
   { value: "due", label: "Due & defaulters" },
   { value: "followup", label: "Follow-up" },
+  { value: "aefi", label: "AEFI" },
   { value: "reports", label: "Reports" },
 ];
 
 // Views where the tab bar shows at all
-const TAB_BAR_VIEWS = ["dashboard", "list", "due", "followup", "reports", "admin"];
+const TAB_BAR_VIEWS = ["dashboard", "list", "due", "followup", "aefi", "reports", "admin"];
 // Views where the "Register child" quick-action makes sense
 const REGISTER_BUTTON_VIEWS = ["dashboard", "list", "due", "followup"];
 
@@ -143,6 +145,7 @@ export default function App() {
     list: "Children & immunization status",
     due: "Due & defaulter list",
     followup: "Defaulter follow-up",
+    aefi: "Adverse events following immunization (AEFI)",
     reports: "Reports",
     admin: "Admin — user management",
     account: "Account settings",
@@ -298,6 +301,8 @@ export default function App() {
             loading={dataLoading}
             onOpenCase={(child, defaulterCase) => setCaseModalTarget({ child, case: defaulterCase })}
           />
+        ) : view === "aefi" ? (
+          <AefiPage token={token} currentUser={currentUser} children={children} />
         ) : view === "reports" ? (
           <ReportsPage token={token} currentUser={currentUser} />
         ) : view === "admin" && isAdmin ? (
