@@ -19,12 +19,18 @@ from app.core.scope import (
 )
 from app.db.session import get_db
 from app.domain.schedule_engine import DoseStatus
+from app.domain.aefi_catalog import EVENT_TYPE_LABELS
+from app.models.aefi import AefiEvent, AefiVaccination
 from app.models.child import Child, ScheduleEntry, VaccinationEvent
 from app.models.defaulter import DefaulterCase, TracingAttempt
 from app.models.user import Facility, GeographicArea, User
 from app.schemas.reports import (
     AggregateReportOut,
     AggregateRow,
+    AefiCountByAntigen,
+    AefiCountByType,
+    AefiSummary,
+    DoseByAntigenDose,
     DoseByVaccine,
     GeneratedReportOut,
     ScopeInfoOut,
@@ -46,7 +52,7 @@ def vaccinations_summary(
     current_user: User = Depends(require_role(*REPORT_ROLES)),
 ):
     """
-    Doses given, grouped by antigen and session type (fixed / outreach /
+    Doses given, grouped by antigen, dose number and session type (fixed / outreach /
     mobile / community), within an optional date range — design doc §26's
     "vaccine utilization report" / "monthly immunization report" concept,
     scoped to what a facility pilot actually needs first: how many of each
@@ -64,6 +70,7 @@ def vaccinations_summary(
     query = (
         db.query(
             ScheduleEntry.antigen,
+            ScheduleEntry.dose_number,
             VaccinationEvent.session_type,
             func.count(VaccinationEvent.id).label("count"),
         )
@@ -81,12 +88,12 @@ def vaccinations_summary(
     # Access scope: only children (and their doses) within this user's scope
     query = restrict(query, Child.facility_id, accessible_facility_ids(db, current_user))
 
-    query = query.group_by(ScheduleEntry.antigen, VaccinationEvent.session_type)
-    query = query.order_by(ScheduleEntry.antigen, VaccinationEvent.session_type)
+    query = query.group_by(ScheduleEntry.antigen, ScheduleEntry.dose_number, VaccinationEvent.session_type)
+    query = query.order_by(ScheduleEntry.antigen, ScheduleEntry.dose_number, VaccinationEvent.session_type)
 
     rows = [
-        VaccinationSummaryRow(antigen=antigen, session_type=session_type, count=count)
-        for antigen, session_type, count in query.all()
+        VaccinationSummaryRow(antigen=antigen, dose_number=dose_number, session_type=session_type, count=count)
+        for antigen, dose_number, session_type, count in query.all()
     ]
     total = sum(r.count for r in rows)
 
@@ -105,7 +112,7 @@ def vaccinations_summary(
 
 NEEDS_ATTENTION = {DoseStatus.DUE_SOON, DoseStatus.DUE, DoseStatus.OVERDUE, DoseStatus.DEFAULTER}
 RETURNED_REASONS = {"vaccinated_returned", "vaccinated_elsewhere"}
-NUMERIC_FIELDS = ["registered", "fully_immunized", "needs_attention", "cases_open", "cases_returned", "doses_given"]
+NUMERIC_FIELDS = ["registered", "fully_immunized", "needs_attention", "cases_open", "cases_returned", "doses_given", "aefi_events"]
 
 
 @router.get("/scope", response_model=ScopeInfoOut)
@@ -138,7 +145,7 @@ def _facility_metrics(db: Session, scope, start_date, end_date) -> dict:
     def bucket(facility_id):
         return metrics.setdefault(
             facility_id,
-            {"registered": 0, "fully_immunized": 0, "needs_attention": 0, "cases_open": 0, "cases_returned": 0, "doses_given": 0},
+            {"registered": 0, "fully_immunized": 0, "needs_attention": 0, "cases_open": 0, "cases_returned": 0, "doses_given": 0, "aefi_events": 0},
         )
 
     children_query = db.query(Child).filter(Child.status == "active", Child.deleted_at.is_(None))
@@ -163,6 +170,19 @@ def _facility_metrics(db: Session, scope, start_date, end_date) -> dict:
     dose_query = restrict(dose_query, Child.facility_id, scope).group_by(Child.facility_id)
     for facility_id, count in dose_query.all():
         bucket(facility_id)["doses_given"] += count
+
+    aefi_query = (
+        db.query(Child.facility_id, func.count(AefiEvent.id))
+        .join(Child, AefiEvent.child_id == Child.id)
+        .filter(Child.deleted_at.is_(None))
+    )
+    if start_date:
+        aefi_query = aefi_query.filter(AefiEvent.onset_date >= start_date)
+    if end_date:
+        aefi_query = aefi_query.filter(AefiEvent.onset_date <= end_date)
+    aefi_query = restrict(aefi_query, Child.facility_id, scope).group_by(Child.facility_id)
+    for facility_id, count in aefi_query.all():
+        bucket(facility_id)["aefi_events"] += count
 
     case_query = (
         db.query(Child.facility_id, DefaulterCase.status, DefaulterCase.closure_reason, func.count(DefaulterCase.id))
@@ -328,6 +348,63 @@ def _user_breakdown(db: Session, scope, start_date, end_date, label: str) -> Agg
 VALID_LEVELS = {"country", "district", "chiefdom", "facility"}
 
 
+def _aefi_summary(db: Session, facility_ids, start_date, end_date, antigens) -> AefiSummary:
+    """AEFIs with onset in the period, for the facilities in scope. If vaccines
+    were selected, only AEFIs linked to at least one of them are counted."""
+    query = (
+        db.query(AefiEvent)
+        .join(Child, AefiEvent.child_id == Child.id)
+        .filter(Child.deleted_at.is_(None))
+    )
+    query = restrict(query, Child.facility_id, facility_ids)
+    if start_date:
+        query = query.filter(AefiEvent.onset_date >= start_date)
+    if end_date:
+        query = query.filter(AefiEvent.onset_date <= end_date)
+    events = query.all()
+    if not events:
+        return AefiSummary()
+
+    link_rows = (
+        db.query(AefiVaccination.aefi_id, ScheduleEntry.antigen)
+        .join(VaccinationEvent, AefiVaccination.vaccination_event_id == VaccinationEvent.id)
+        .join(ScheduleEntry, VaccinationEvent.schedule_entry_id == ScheduleEntry.id)
+        .filter(AefiVaccination.aefi_id.in_([e.id for e in events]))
+        .all()
+    )
+    antigens_by_aefi: dict = {}
+    for aefi_id, antigen in link_rows:
+        antigens_by_aefi.setdefault(aefi_id, set()).add(antigen)
+
+    wanted = set(antigens or [])
+    if wanted:
+        events = [e for e in events if antigens_by_aefi.get(e.id, set()) & wanted]
+
+    by_type: dict = {}
+    by_antigen: dict = {}
+    for e in events:
+        by_type[e.event_type] = by_type.get(e.event_type, 0) + 1
+        for antigen in antigens_by_aefi.get(e.id, set()):
+            if not wanted or antigen in wanted:
+                by_antigen[antigen] = by_antigen.get(antigen, 0) + 1
+
+    return AefiSummary(
+        total=len(events),
+        mild=sum(1 for e in events if e.severity == "mild"),
+        moderate=sum(1 for e in events if e.severity == "moderate"),
+        severe=sum(1 for e in events if e.severity == "severe"),
+        serious=sum(1 for e in events if e.is_serious),
+        serious_awaiting_report=sum(1 for e in events if e.is_serious and e.reported_date is None),
+        by_event_type=[
+            AefiCountByType(event_type=k, label=EVENT_TYPE_LABELS.get(k, k), count=v)
+            for k, v in sorted(by_type.items(), key=lambda kv: (-kv[1], kv[0]))
+        ],
+        by_antigen=[
+            AefiCountByAntigen(antigen=k, count=v) for k, v in sorted(by_antigen.items(), key=lambda kv: (-kv[1], kv[0]))
+        ],
+    )
+
+
 @router.get("/vaccines", response_model=list[VaccineOut])
 def list_vaccines(
     db: Session = Depends(get_db),
@@ -403,9 +480,9 @@ def generate_report(
         if is_fully_immunized_child(db, child, evaluations=evaluations):
             fully_immunized += 1
 
-    # --- doses given, by vaccine, within the date range ---
+    # --- doses given, for EACH DOSE of each selected antigen, within the date range ---
     dose_query = (
-        db.query(ScheduleEntry.antigen, func.count(VaccinationEvent.id))
+        db.query(ScheduleEntry.antigen, ScheduleEntry.dose_number, func.count(VaccinationEvent.id))
         .join(ScheduleEntry, VaccinationEvent.schedule_entry_id == ScheduleEntry.id)
         .join(Child, VaccinationEvent.child_id == Child.id)
         .filter(Child.deleted_at.is_(None))
@@ -417,11 +494,26 @@ def generate_report(
         dose_query = dose_query.filter(VaccinationEvent.event_date <= end_date)
     if antigens:
         dose_query = dose_query.filter(ScheduleEntry.antigen.in_(antigens))
-    dose_query = dose_query.group_by(ScheduleEntry.antigen)
+    dose_query = dose_query.group_by(ScheduleEntry.antigen, ScheduleEntry.dose_number)
+    given: dict = {}
+    for antigen, dose_number, count in dose_query.all():
+        given[(antigen, dose_number)] = given.get((antigen, dose_number), 0) + count
 
-    doses_by_vaccine: dict = {}
-    for antigen, count in dose_query.all():
-        doses_by_vaccine[antigen] = doses_by_vaccine.get(antigen, 0) + count
+    # Every dose of every selected antigen gets a row, even with zero given —
+    # a missing row would look like "not reported" rather than "none given".
+    schedule_query = db.query(
+        ScheduleEntry.antigen, ScheduleEntry.dose_number, func.min(ScheduleEntry.display_order)
+    ).group_by(ScheduleEntry.antigen, ScheduleEntry.dose_number)
+    if antigens:
+        schedule_query = schedule_query.filter(ScheduleEntry.antigen.in_(antigens))
+    schedule_rows = sorted(schedule_query.all(), key=lambda r: (r[2], r[0], r[1]))
+    doses_by_dose = [
+        DoseByAntigenDose(antigen=a, dose_number=n, doses_given=given.get((a, n), 0))
+        for a, n, _order in schedule_rows
+    ]
+    doses_by_vaccine_totals: dict = {}
+    for row in doses_by_dose:
+        doses_by_vaccine_totals[row.antigen] = doses_by_vaccine_totals.get(row.antigen, 0) + row.doses_given
 
     # --- defaulter cases: open vs. returned-to-service, within scope ---
     case_query = (
@@ -448,8 +540,10 @@ def generate_report(
         registered=registered,
         fully_immunized=fully_immunized,
         needs_attention=needs_attention,
-        doses_given_total=sum(doses_by_vaccine.values()),
-        doses_by_vaccine=[DoseByVaccine(antigen=a, doses_given=c) for a, c in sorted(doses_by_vaccine.items())],
+        doses_given_total=sum(doses_by_vaccine_totals.values()),
+        doses_by_vaccine=[DoseByVaccine(antigen=a, doses_given=c) for a, c in doses_by_vaccine_totals.items()],
+        doses_by_dose=doses_by_dose,
+        aefi=_aefi_summary(db, target_ids, start_date, end_date, antigens),
         cases_open=cases_open,
         cases_returned=cases_returned,
     )

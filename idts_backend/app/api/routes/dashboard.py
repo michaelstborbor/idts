@@ -8,6 +8,7 @@ from app.core.deps import get_current_user
 from app.core.scope import resolve_facility_scope, restrict, scope_label
 from app.db.session import get_db
 from app.domain.schedule_engine import DoseStatus
+from app.models.aefi import AefiEvent
 from app.models.child import Child, VaccinationEvent
 from app.models.defaulter import DefaulterCase
 from app.models.user import User
@@ -98,6 +99,12 @@ def get_dashboard_stats(
     pending_confirmation = sum(1 for c in active_cases if c.status == "return_pending_confirmation")
     returned = sum(1 for c in closed_cases if c.closure_reason in ("vaccinated_returned", "vaccinated_elsewhere"))
 
+    aefi_query = db.query(AefiEvent).join(Child, AefiEvent.child_id == Child.id).filter(Child.deleted_at.is_(None))
+    aefis = restrict(aefi_query, Child.facility_id, scope).all()
+    aefi_by_severity = {"mild": 0, "moderate": 0, "severe": 0}
+    for a in aefis:
+        aefi_by_severity[a.severity] = aefi_by_severity.get(a.severity, 0) + 1
+
     return DashboardStatsOut(
         registered=registered,
         fully_immunized=fully_immunized,
@@ -109,4 +116,8 @@ def get_dashboard_stats(
         cases_pending_confirmation=pending_confirmation,
         cases_returned_to_service=returned,
         scope_label=scope_label(db, current_user),
+        aefi_total=len(aefis),
+        aefi_by_severity=aefi_by_severity,
+        aefi_serious=sum(1 for a in aefis if a.is_serious),
+        aefi_serious_awaiting_report=sum(1 for a in aefis if a.is_serious and a.reported_date is None),
     )

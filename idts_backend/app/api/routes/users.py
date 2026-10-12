@@ -10,6 +10,7 @@ from app.core.deps import get_current_user, require_role
 from app.core.scope import accessible_facility_ids, ensure_facility_in_scope, restrict
 from app.core.security import hash_password, verify_password
 from app.db.session import get_db
+from app.models.aefi import AefiEvent
 from app.models.child import VaccinationEvent
 from app.models.defaulter import AuditLog, DefaulterCase, TracingAttempt
 from app.models.user import ROLES, User
@@ -271,12 +272,13 @@ def delete_user(
         or db.query(DefaulterCase).filter(DefaulterCase.assigned_to_id == user.id).first() is not None
         or db.query(TracingAttempt).filter(TracingAttempt.tracer_id == user.id).first() is not None
         or db.query(AuditLog).filter(AuditLog.user_id == user.id).first() is not None
+        or db.query(AefiEvent).filter(AefiEvent.recorded_by_id == user.id).first() is not None
     )
     if has_records:
         raise HTTPException(
             status_code=409,
             detail=(
-                "This user has vaccination, follow-up or audit records linked to them, so they can't be "
+                "This user has vaccination, follow-up, AEFI or audit records linked to them, so they can't be "
                 "permanently removed without breaking the record history. Deactivate the account instead."
             ),
         )
