@@ -13,3 +13,8 @@ class DashboardStatsOut(BaseModel):
     cases_pending_confirmation: int
     cases_returned_to_service: int
     scope_label: str = ""
+    # Adverse events following immunization (all-time, within the caller's scope)
+    aefi_total: int = 0
+    aefi_by_severity: dict[str, int] = {"mild": 0, "moderate": 0, "severe": 0}
+    aefi_serious: int = 0
+    aefi_serious_awaiting_report: int = 0
