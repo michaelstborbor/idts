@@ -9,3 +9,4 @@ Base.metadata.create_all() or running Alembic autogenerate.
 from app.models.user import GeographicArea, Facility, User  # noqa: F401
 from app.models.child import Child, ImmunizationSchedule, ScheduleEntry, VaccinationEvent  # noqa: F401
 from app.models.defaulter import DefaulterCase, TracingAttempt, AuditLog  # noqa: F401
+from app.models.aefi import AefiEvent, AefiVaccination  # noqa: F401
