@@ -159,6 +159,23 @@ export const api = {
     request("/api/v1/dashboard", { token, params: { facility_id: facilityId } }),
 
   getReportScope: (token) => request("/api/v1/reports/scope", { token }),
+
+  // ---- AEFI (adverse events following immunization) ----
+  aefiCatalog: (token) => request("/api/v1/aefi/catalog", { token }),
+  aefiSuggest: (token, { eventType, severity, seriousCriteria = [], partOfCluster = false }) => {
+    const params = new URLSearchParams();
+    params.set("event_type", eventType);
+    params.set("severity", severity);
+    seriousCriteria.forEach((c) => params.append("serious_criteria", c));
+    params.set("part_of_cluster", partOfCluster ? "true" : "false");
+    return request(`/api/v1/aefi/suggest?${params.toString()}`, { token });
+  },
+  aefiChildVaccinations: (token, childId) => request(`/api/v1/aefi/children/${childId}/vaccinations`, { token }),
+  listAefi: (token, { severity, seriousOnly } = {}) =>
+    request("/api/v1/aefi", { token, params: { severity, serious_only: seriousOnly ? "true" : undefined } }),
+  createAefi: (token, payload) => request("/api/v1/aefi", { method: "POST", token, body: payload }),
+  updateAefi: (token, aefiId, payload) =>
+    request(`/api/v1/aefi/${aefiId}`, { method: "PATCH", token, body: payload }),
   listVaccines: (token) => request("/api/v1/reports/vaccines", { token }),
   generateReport: (token, { level, unitId, antigens, startDate, endDate }) => {
     const params = new URLSearchParams();
