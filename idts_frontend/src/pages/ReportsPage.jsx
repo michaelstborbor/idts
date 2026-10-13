@@ -378,9 +378,16 @@ function generatedReportToCsv(report) {
   return meta + summary + header + body + aefiSummary + byType + byAntigen;
 }
 
+// A vaccine's doses from /reports/vaccines, e.g. Pentavalent 1, 2, 3.
+function dosesOf(vaccine) {
+  return vaccine.doses || [];
+}
+
+const linkButton = { background: "none", border: "none", padding: 0, color: COLORS.primary, fontSize: 12, cursor: "pointer", textDecoration: "underline" };
+
 function GeneratedReportSection({ token, role }) {
   const [vaccines, setVaccines] = useState([]);
-  const [selectedVaccines, setSelectedVaccines] = useState([]);
+  const [selectedDoses, setSelectedDoses] = useState([]); // dose keys, "<antigen>|<dose number>"
   const [orgUnit, setOrgUnit] = useState(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -391,25 +398,36 @@ function GeneratedReportSection({ token, role }) {
   useEffect(() => {
     api.listVaccines(token).then((list) => {
       setVaccines(list);
-      setSelectedVaccines(list.map((v) => v.antigen)); // all selected by default
+      setSelectedDoses(list.flatMap((v) => dosesOf(v).map((d) => d.key))); // all selected by default
     }).catch(() => {});
   }, [token]);
 
-  function toggleVaccine(antigen) {
-    setSelectedVaccines((prev) => prev.includes(antigen) ? prev.filter((a) => a !== antigen) : [...prev, antigen]);
+  function toggleDose(key) {
+    setSelectedDoses((prev) => prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]);
   }
+
+  // Selects every dose of an antigen, or clears them all if they're all selected already.
+  function toggleAntigen(vaccine) {
+    const keys = dosesOf(vaccine).map((d) => d.key);
+    setSelectedDoses((prev) => keys.every((k) => prev.includes(k))
+      ? prev.filter((k) => !keys.includes(k))
+      : [...prev, ...keys.filter((k) => !prev.includes(k))]);
+  }
+
+  const allDoseKeys = vaccines.flatMap((v) => dosesOf(v).map((d) => d.key));
 
   async function generate() {
     if (!orgUnit) return setError("Choose an organizational unit first.");
     if (startDate && endDate && startDate > endDate) return setError("Start date can't be after end date.");
+    if (allDoseKeys.length > 0 && selectedDoses.length === 0) return setError("Choose at least one vaccine dose.");
     setError("");
     setLoading(true);
     try {
-      const allSelected = selectedVaccines.length === vaccines.length;
+      const allSelected = allDoseKeys.every((k) => selectedDoses.includes(k));
       const data = await api.generateReport(token, {
         level: orgUnit.level,
         unitId: orgUnit.unitId,
-        antigens: allSelected ? [] : selectedVaccines, // omitting = "all vaccines" server-side too
+        doses: allSelected ? [] : selectedDoses, // omitting = "all vaccines" server-side too
         startDate: startDate || undefined,
         endDate: endDate || undefined,
       });
@@ -435,23 +453,49 @@ function GeneratedReportSection({ token, role }) {
         </div>
 
         <div>
-          <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.ink, margin: "0 0 10px" }}>2. Vaccines</p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.ink, margin: "0 0 4px" }}>2. Vaccine doses</p>
+          <p style={{ fontSize: 12, color: COLORS.muted, margin: "0 0 10px" }}>
+            Pick individual doses, or tap a vaccine's name to select or clear all of its doses.{" "}
+            <button type="button" onClick={() => setSelectedDoses(allDoseKeys)} style={linkButton}>Select all</button>
+            {" · "}
+            <button type="button" onClick={() => setSelectedDoses([])} style={linkButton}>Clear</button>
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {vaccines.map((v) => {
-              const checked = selectedVaccines.includes(v.antigen);
+              const doses = dosesOf(v);
+              const selectedCount = doses.filter((d) => selectedDoses.includes(d.key)).length;
               return (
-                <label
-                  key={v.antigen}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 13, cursor: "pointer",
-                    border: `1px solid ${checked ? COLORS.primary : COLORS.inputBorder}`,
-                    backgroundColor: checked ? COLORS.primary : COLORS.white,
-                    color: checked ? "#fff" : COLORS.ink,
-                  }}
-                >
-                  <input type="checkbox" checked={checked} onChange={() => toggleVaccine(v.antigen)} style={{ display: "none" }} />
-                  {v.antigen}
-                </label>
+                <div key={v.antigen} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+                  {doses.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleAntigen(v)}
+                      title={`Select or clear every ${v.antigen} dose`}
+                      style={{ minWidth: 150, textAlign: "left", fontSize: 13, fontWeight: 600, color: COLORS.ink, background: "none", border: "none", padding: "6px 0", cursor: "pointer" }}
+                    >
+                      {v.antigen} <span style={{ color: COLORS.muted, fontWeight: 400 }}>({selectedCount}/{doses.length})</span>
+                    </button>
+                  ) : (
+                    <span style={{ minWidth: 150 }} /> // single-dose vaccine: its chip is the whole row
+                  )}
+                  {doses.map((d) => {
+                    const checked = selectedDoses.includes(d.key);
+                    return (
+                      <label
+                        key={d.key}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 13, cursor: "pointer",
+                          border: `1px solid ${checked ? COLORS.primary : COLORS.inputBorder}`,
+                          backgroundColor: checked ? COLORS.primary : COLORS.white,
+                          color: checked ? "#fff" : COLORS.ink,
+                        }}
+                      >
+                        <input type="checkbox" checked={checked} onChange={() => toggleDose(d.key)} style={{ display: "none" }} />
+                        {d.label}
+                      </label>
+                    );
+                  })}
+                </div>
               );
             })}
           </div>

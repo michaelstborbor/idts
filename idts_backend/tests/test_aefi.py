@@ -327,6 +327,57 @@ def test_generated_report_includes_aefi_summary_filtered_by_vaccine(client, worl
     assert {r["antigen"]: r["count"] for r in everything["by_antigen"]} == {"BCG": 2, "OPV": 1}
 
 
+def test_vaccine_list_includes_each_dose(client, world):
+    vaccines = client.get("/api/v1/reports/vaccines", headers=_h(client, "admin")).json()
+    by_antigen = {v["antigen"]: v["doses"] for v in vaccines}
+    assert [d["label"] for d in by_antigen["OPV"]] == ["OPV 1", "OPV 2"]
+    assert [d["key"] for d in by_antigen["OPV"]] == ["OPV|1", "OPV|2"]
+    assert [d["label"] for d in by_antigen["BCG"]] == ["BCG"]  # single dose: no number
+
+
+def test_generated_report_dose_filter_limits_to_selected_doses(client, world):
+    report = client.get(
+        "/api/v1/reports/generate",
+        params={"level": "facility", "unit_id": world["f1"], "doses": ["OPV|1", "BCG|1"]},
+        headers=_h(client, "admin"),
+    ).json()
+    rows = {(r["antigen"], r["dose_number"]): r["doses_given"] for r in report["doses_by_dose"]}
+    assert rows == {("BCG", 1): 1, ("OPV", 1): 1}
+    assert report["doses_given_total"] == 2
+    assert report["vaccines_included"] == ["BCG", "OPV 1"]
+
+    only_dose_2 = client.get(
+        "/api/v1/reports/generate",
+        params={"level": "facility", "unit_id": world["f1"], "doses": ["OPV|2"]},
+        headers=_h(client, "admin"),
+    ).json()
+    assert [(r["antigen"], r["dose_number"], r["doses_given"]) for r in only_dose_2["doses_by_dose"]] == [("OPV", 2, 0)]
+    assert only_dose_2["doses_given_total"] == 0
+
+
+def test_generated_report_rejects_malformed_dose(client, world):
+    resp = client.get(
+        "/api/v1/reports/generate",
+        params={"level": "facility", "unit_id": world["f1"], "doses": ["OPV"]},
+        headers=_h(client, "admin"),
+    )
+    assert resp.status_code == 400
+
+
+def test_aefi_summary_follows_dose_filter(client, world):
+    admin = _h(client, "admin")
+    client.post(
+        "/api/v1/aefi",
+        json=_payload(world, event_type="anaphylaxis", severity="severe", vaccination_event_ids=[world["v_opv1"]]),
+        headers=admin,
+    )
+    params = {"level": "facility", "unit_id": world["f1"]}
+    opv1 = client.get("/api/v1/reports/generate", params={**params, "doses": ["OPV|1"]}, headers=admin).json()["aefi"]
+    assert opv1["total"] == 1
+    opv2 = client.get("/api/v1/reports/generate", params={**params, "doses": ["OPV|2"]}, headers=admin).json()["aefi"]
+    assert opv2["total"] == 0
+
+
 def test_aefi_period_filter_uses_onset_date(client, world):
     admin = _h(client, "admin")
     client.post("/api/v1/aefi", json=_payload(world, onset_date=str(date.today() - timedelta(days=2))), headers=admin)

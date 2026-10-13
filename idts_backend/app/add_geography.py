@@ -4,7 +4,9 @@ database, without touching anything already there — current districts,
 users, children, vaccination history, defaulter cases, everything stays
 exactly as it is.
 
-Reads app/data/new_districts.json, shaped like:
+Reads every district file in app/data/ (any *.json shaped like the example
+below, e.g. karene_district.json; kono_facilities.json, which the main seed
+uses, has a different shape and is skipped):
     {
       "<District Name>": {
         "province": "<Province Name>",
@@ -15,8 +17,8 @@ Reads app/data/new_districts.json, shaped like:
       },
       ...
     }
-Add more districts later by extending that same JSON file and re-running
-this script — it is safe to run more than once. Matching is by exact
+Add more districts later by extending a JSON file (or dropping a new one in
+app/data/) and re-running this script — it is safe to run more than once. Matching is by exact
 name: a district, chiefdom, or facility whose name already exists under
 the right parent is left alone rather than duplicated; anything new is
 added. A Province that doesn't exist yet is created once and reused.
@@ -31,7 +33,23 @@ from pathlib import Path
 from app.db.session import SessionLocal
 from app.models.user import Facility, GeographicArea
 
-DATA_PATH = Path(__file__).parent / "data" / "new_districts.json"
+DATA_DIR = Path(__file__).parent / "data"
+
+
+def load_district_files(data_dir: Path = DATA_DIR) -> dict:
+    """Merges every district-shaped JSON file in data_dir into one
+    {district name: {"province": ..., "chiefdoms": {...}}} dict. Files that
+    aren't shaped that way (e.g. kono_facilities.json) are ignored."""
+    merged: dict = {}
+    for path in sorted(data_dir.glob("*.json")):
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict) or not data:
+            continue
+        if not all(isinstance(v, dict) and "province" in v and "chiefdoms" in v for v in data.values()):
+            continue
+        merged.update(data)
+    return merged
 
 
 def get_or_create_area(db, name: str, level: str, parent) -> GeographicArea:
@@ -52,8 +70,9 @@ def run(db=None):
     if owns_session:
         db = SessionLocal()
     try:
-        with open(DATA_PATH, encoding="utf-8") as f:
-            data = json.load(f)
+        data = load_district_files()
+        if not data:
+            return
 
         # All new districts here sit under Sierra Leone -> their Province,
         # the same two top levels your existing Kono data already uses.

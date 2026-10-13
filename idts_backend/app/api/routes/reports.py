@@ -36,6 +36,7 @@ from app.schemas.reports import (
     ScopeInfoOut,
     VaccinationSummaryOut,
     VaccinationSummaryRow,
+    VaccineDoseOut,
     VaccineOut,
 )
 from app.services.schedule_service import evaluate_child, is_fully_immunized_child
@@ -348,9 +349,38 @@ def _user_breakdown(db: Session, scope, start_date, end_date, label: str) -> Agg
 VALID_LEVELS = {"country", "district", "chiefdom", "facility"}
 
 
-def _aefi_summary(db: Session, facility_ids, start_date, end_date, antigens) -> AefiSummary:
+DOSE_KEY_SEPARATOR = "|"
+
+
+def _dose_key(antigen: str, dose_number: int) -> str:
+    return f"{antigen}{DOSE_KEY_SEPARATOR}{dose_number}"
+
+
+def _parse_dose_keys(doses: Optional[list[str]]) -> set:
+    """"Pentavalent|2" -> ("Pentavalent", 2). Rejects anything malformed."""
+    parsed = set()
+    for raw in doses or []:
+        antigen, sep, number = raw.rpartition(DOSE_KEY_SEPARATOR)
+        if not sep or not antigen or not number.lstrip("-").isdigit():
+            raise HTTPException(status_code=400, detail=f"Invalid dose '{raw}'. Expected '<antigen>|<dose number>'.")
+        parsed.add((antigen, int(number)))
+    return parsed
+
+
+def _dose_labels(db: Session) -> dict:
+    """(antigen, dose_number) -> display label: "Pentavalent 2" when the
+    antigen has several doses, just the antigen name when it has one."""
+    pairs = db.query(ScheduleEntry.antigen, ScheduleEntry.dose_number).distinct().all()
+    dose_count: dict = {}
+    for antigen, _ in pairs:
+        dose_count[antigen] = dose_count.get(antigen, 0) + 1
+    return {(a, n): (f"{a} {n}" if dose_count[a] > 1 else a) for a, n in pairs}
+
+
+def _aefi_summary(db: Session, facility_ids, start_date, end_date, antigens, doses=None) -> AefiSummary:
     """AEFIs with onset in the period, for the facilities in scope. If vaccines
-    were selected, only AEFIs linked to at least one of them are counted."""
+    (or individual doses) were selected, only AEFIs linked to at least one of
+    them are counted."""
     query = (
         db.query(AefiEvent)
         .join(Child, AefiEvent.child_id == Child.id)
@@ -366,18 +396,24 @@ def _aefi_summary(db: Session, facility_ids, start_date, end_date, antigens) -> 
         return AefiSummary()
 
     link_rows = (
-        db.query(AefiVaccination.aefi_id, ScheduleEntry.antigen)
+        db.query(AefiVaccination.aefi_id, ScheduleEntry.antigen, ScheduleEntry.dose_number)
         .join(VaccinationEvent, AefiVaccination.vaccination_event_id == VaccinationEvent.id)
         .join(ScheduleEntry, VaccinationEvent.schedule_entry_id == ScheduleEntry.id)
         .filter(AefiVaccination.aefi_id.in_([e.id for e in events]))
         .all()
     )
+    wanted_doses = set(doses or [])
     antigens_by_aefi: dict = {}
-    for aefi_id, antigen in link_rows:
+    for aefi_id, antigen, dose_number in link_rows:
+        # With a dose filter, only links to a selected dose count.
+        if wanted_doses and (antigen, dose_number) not in wanted_doses:
+            continue
         antigens_by_aefi.setdefault(aefi_id, set()).add(antigen)
 
     wanted = set(antigens or [])
-    if wanted:
+    if wanted_doses:
+        events = [e for e in events if antigens_by_aefi.get(e.id)]
+    elif wanted:
         events = [e for e in events if antigens_by_aefi.get(e.id, set()) & wanted]
 
     by_type: dict = {}
@@ -411,14 +447,29 @@ def list_vaccines(
     current_user: User = Depends(require_role(*REPORT_ROLES)),
 ):
     """Every antigen in the immunization schedule, for the report's vaccine
-    checklist. One row per antigen even though some have several doses."""
+    checklist, each with its individual doses (e.g. Pentavalent 1, 2, 3) so
+    the report can be filtered by dose as well as by antigen."""
     rows = (
-        db.query(ScheduleEntry.antigen, func.min(ScheduleEntry.display_order))
-        .group_by(ScheduleEntry.antigen)
-        .order_by(func.min(ScheduleEntry.display_order))
+        db.query(ScheduleEntry.antigen, ScheduleEntry.dose_number, func.min(ScheduleEntry.display_order))
+        .group_by(ScheduleEntry.antigen, ScheduleEntry.dose_number)
         .all()
     )
-    return [VaccineOut(antigen=antigen) for antigen, _ in rows]
+    labels = _dose_labels(db)
+    first_order: dict = {}
+    doses: dict = {}
+    for antigen, dose_number, order in rows:
+        first_order[antigen] = min(first_order.get(antigen, order), order)
+        doses.setdefault(antigen, []).append(dose_number)
+    return [
+        VaccineOut(
+            antigen=antigen,
+            doses=[
+                VaccineDoseOut(key=_dose_key(antigen, n), dose_number=n, label=labels[(antigen, n)])
+                for n in sorted(doses[antigen])
+            ],
+        )
+        for antigen in sorted(first_order, key=lambda a: (first_order[a], a))
+    ]
 
 
 @router.get("/generate", response_model=GeneratedReportOut)
@@ -426,6 +477,7 @@ def generate_report(
     level: str,
     unit_id: uuid.UUID,
     antigens: Optional[list[str]] = Query(default=None),
+    doses: Optional[list[str]] = Query(default=None),
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     db: Session = Depends(get_db),
@@ -438,6 +490,8 @@ def generate_report(
     level="facility").
     antigens: which vaccines to include in the dose breakdown — every
     antigen in the schedule if omitted or empty.
+    doses: individual doses to include instead, as "<antigen>|<dose number>"
+    (e.g. "Pentavalent|1"). When given, it takes precedence over antigens.
 
     Access is checked against accessible_facility_ids (app/core/scope.py) —
     the SAME scope as Dashboard/Children now, not a separately-widened one
@@ -450,6 +504,11 @@ def generate_report(
         raise HTTPException(status_code=400, detail=f"level must be one of: {', '.join(sorted(VALID_LEVELS))}.")
     if start_date and end_date and start_date > end_date:
         raise HTTPException(status_code=400, detail="start_date must not be after end_date.")
+    selected_doses = _parse_dose_keys(doses)
+    if selected_doses:
+        # The dose filter is the finer one, so it replaces antigens; the SQL
+        # below narrows to these antigens, then rows are kept per dose.
+        antigens = sorted({antigen for antigen, _ in selected_doses})
 
     if level == "facility":
         facility = db.query(Facility).filter(Facility.id == unit_id).first()
@@ -497,6 +556,8 @@ def generate_report(
     dose_query = dose_query.group_by(ScheduleEntry.antigen, ScheduleEntry.dose_number)
     given: dict = {}
     for antigen, dose_number, count in dose_query.all():
+        if selected_doses and (antigen, dose_number) not in selected_doses:
+            continue
         given[(antigen, dose_number)] = given.get((antigen, dose_number), 0) + count
 
     # Every dose of every selected antigen gets a row, even with zero given —
@@ -507,6 +568,8 @@ def generate_report(
     if antigens:
         schedule_query = schedule_query.filter(ScheduleEntry.antigen.in_(antigens))
     schedule_rows = sorted(schedule_query.all(), key=lambda r: (r[2], r[0], r[1]))
+    if selected_doses:
+        schedule_rows = [r for r in schedule_rows if (r[0], r[1]) in selected_doses]
     doses_by_dose = [
         DoseByAntigenDose(antigen=a, dose_number=n, doses_given=given.get((a, n), 0))
         for a, n, _order in schedule_rows
@@ -531,19 +594,25 @@ def generate_report(
         elif closure_reason in RETURNED_REASONS:
             cases_returned += count
 
+    if selected_doses:
+        labels = _dose_labels(db)
+        vaccines_included = [labels.get((a, n), f"{a} {n}") for a, n, _order in schedule_rows]
+    else:
+        vaccines_included = sorted(antigens) if antigens else ["All vaccines"]
+
     return GeneratedReportOut(
         unit_level=level,
         unit_name=unit_name,
         start_date=start_date,
         end_date=end_date,
-        vaccines_included=sorted(antigens) if antigens else ["All vaccines"],
+        vaccines_included=vaccines_included,
         registered=registered,
         fully_immunized=fully_immunized,
         needs_attention=needs_attention,
         doses_given_total=sum(doses_by_vaccine_totals.values()),
         doses_by_vaccine=[DoseByVaccine(antigen=a, doses_given=c) for a, c in doses_by_vaccine_totals.items()],
         doses_by_dose=doses_by_dose,
-        aefi=_aefi_summary(db, target_ids, start_date, end_date, antigens),
+        aefi=_aefi_summary(db, target_ids, start_date, end_date, antigens, selected_doses),
         cases_open=cases_open,
         cases_returned=cases_returned,
     )

@@ -177,13 +177,14 @@ export const api = {
   updateAefi: (token, aefiId, payload) =>
     request(`/api/v1/aefi/${aefiId}`, { method: "PATCH", token, body: payload }),
   listVaccines: (token) => request("/api/v1/reports/vaccines", { token }),
-  generateReport: (token, { level, unitId, antigens, startDate, endDate }) => {
+  generateReport: (token, { level, unitId, antigens, doses, startDate, endDate }) => {
     const params = new URLSearchParams();
     params.set("level", level);
     params.set("unit_id", unitId);
     if (startDate) params.set("start_date", startDate);
     if (endDate) params.set("end_date", endDate);
     (antigens || []).forEach((a) => params.append("antigens", a));
+    (doses || []).forEach((d) => params.append("doses", d)); // "<antigen>|<dose number>"
     return request(`/api/v1/reports/generate?${params.toString()}`, { token });
   },
   getAggregateReport: (token, { groupBy, startDate, endDate } = {}) =>
