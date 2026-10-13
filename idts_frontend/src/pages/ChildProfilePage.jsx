@@ -48,33 +48,33 @@ export default function ChildProfilePage({ token, childId, facilities, onBack, o
   }
 
   if (loading) return <p style={{ textAlign: "center", color: COLORS.muted }}>Loading…</p>;
-  if (error) return <p style={{ textAlign: "center", color: "#8C2E1C" }}>{error}</p>;
+  if (error) return <p style={{ textAlign: "center", color: "#A1131B" }}>{error}</p>;
   if (!child) return null;
 
   return (
     <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto" }}>
-      <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, color: COLORS.primary, background: "none", border: "none", cursor: "pointer", marginBottom: 20, padding: 0 }}>
-        <ChevronLeft size={16} /> All children
+      <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 16, color: COLORS.primary, background: "none", border: "none", cursor: "pointer", marginBottom: 20, padding: 0 }}>
+        <ChevronLeft size={20} /> All children
       </button>
 
       <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
         <div>
-          <h2 style={{ fontSize: 24, fontWeight: 600, color: COLORS.ink, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+          <h2 style={{ fontSize: 28, fontWeight: 600, color: COLORS.ink, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
             {child.full_name}
             {child.fully_immunized && (
-              <span title="Fully Immunized (FIC)" style={{ display: "inline-flex", alignItems: "center", gap: 5, backgroundColor: "#2F6B4F", color: "#FFFFFF", borderRadius: 999, padding: "3px 10px", fontSize: 12, fontWeight: 500 }}>
-                <ShieldCheck size={13} /> Fully Immunized
+              <span title="Fully Immunized (FIC)" style={{ display: "inline-flex", alignItems: "center", gap: 5, backgroundColor: "#10633B", color: "#FFFFFF", borderRadius: 999, padding: "3px 10px", fontSize: 14, fontWeight: 600 }}>
+                <ShieldCheck size={16} /> Fully Immunized
               </span>
             )}
           </h2>
-          <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 4 }}>
+          <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 4 }}>
             {ageLabel(child.dob)} · Born {fmtDate(child.dob)} · {child.sex === "F" ? "Female" : "Male"} · {child.system_id}
           </p>
           {child.address && (
-            <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 4 }}>Address: {child.address}</p>
+            <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 4 }}>Address: {child.address}</p>
           )}
           {child.caregiver_name && (
-            <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 4 }}>
+            <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 4 }}>
               Caregiver: {child.caregiver_name}{child.caregiver_phone ? ` · ${child.caregiver_phone}` : ""}
             </p>
           )}
@@ -83,21 +83,21 @@ export default function ChildProfilePage({ token, childId, facilities, onBack, o
           <button
             onClick={() => onEdit(child)}
             title="Edit this record"
-            style={{ padding: 8, borderRadius: 8, border: `1px solid ${COLORS.inputBorder}`, backgroundColor: COLORS.white, cursor: "pointer", display: "flex" }}
+            style={{ width: 44, height: 44, borderRadius: 10, border: `1.5px solid ${COLORS.inputBorder}`, backgroundColor: COLORS.white, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
           >
-            <Pencil size={15} color={COLORS.ink} />
+            <Pencil size={20} color={COLORS.ink} />
           </button>
           <button
             onClick={() => setConfirmingDelete(true)}
             title="Delete this record"
-            style={{ padding: 8, borderRadius: 8, border: "1px solid #F6D9D2", backgroundColor: "#FBE9E4", cursor: "pointer", display: "flex" }}
+            style={{ width: 44, height: 44, borderRadius: 10, border: `1.5px solid #F2A9AD`, backgroundColor: COLORS.dangerTint, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
           >
-            <Trash2 size={15} color="#8C2E1C" />
+            <Trash2 size={20} color="#A1131B" />
           </button>
         </div>
       </div>
 
-      <h3 style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6B6660", marginBottom: 12 }}>
+      <h3 style={{ fontSize: 18, fontWeight: 700, color: "#10222E", marginBottom: 12 }}>
         Immunization schedule
       </h3>
       <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, overflow: "hidden", marginBottom: 32 }}>
@@ -107,12 +107,12 @@ export default function ChildProfilePage({ token, childId, facilities, onBack, o
             style={{ padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, borderTop: i === 0 ? "none" : `1px solid ${COLORS.border}` }}
           >
             <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: 15, fontWeight: 500, color: COLORS.ink, margin: 0 }}>
+              <p style={{ fontSize: 16, fontWeight: 600, color: COLORS.ink, margin: 0 }}>
                 {dose.antigen} <span style={{ color: COLORS.muted, fontWeight: 400 }}>· dose {dose.dose_number}</span>
               </p>
-              <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 2 }}>{dose.reason}</p>
+              <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 2 }}>{dose.reason}</p>
               {(dose.dosage || dose.route || dose.site) && (
-                <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 2 }}>
+                <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 2 }}>
                   {[dose.dosage, dose.route, dose.site].filter(Boolean).join(" · ")}
                 </p>
               )}
@@ -123,9 +123,9 @@ export default function ChildProfilePage({ token, childId, facilities, onBack, o
                 <button
                   onClick={() => setModalDose(dose)}
                   title="Record this vaccination"
-                  style={{ padding: 8, borderRadius: 8, backgroundColor: COLORS.primary, border: "none", cursor: "pointer", display: "flex" }}
+                  style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: COLORS.primary, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
                 >
-                  <Syringe size={15} color="#fff" />
+                  <Syringe size={20} color="#fff" />
                 </button>
               )}
             </div>
@@ -133,11 +133,11 @@ export default function ChildProfilePage({ token, childId, facilities, onBack, o
         ))}
       </div>
 
-      <h3 style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6B6660", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
-        <History size={14} /> Vaccination history
+      <h3 style={{ fontSize: 18, fontWeight: 700, color: "#10222E", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+        <History size={18} /> Vaccination history
       </h3>
       {vaccinations.length === 0 ? (
-        <p style={{ fontSize: 14, color: COLORS.muted }}>No vaccinations recorded yet.</p>
+        <p style={{ fontSize: 16, color: COLORS.muted }}>No vaccinations recorded yet.</p>
       ) : (
         <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, overflow: "hidden" }}>
           {vaccinations.map((v, i) => {
@@ -145,22 +145,22 @@ export default function ChildProfilePage({ token, childId, facilities, onBack, o
             return (
               <div key={v.id} style={{ padding: "12px 16px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, borderTop: i === 0 ? "none" : `1px solid ${COLORS.border}` }}>
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ fontSize: 15, fontWeight: 500, color: COLORS.ink, margin: 0 }}>
+                  <p style={{ fontSize: 16, fontWeight: 600, color: COLORS.ink, margin: 0 }}>
                     {scheduleRow ? `${scheduleRow.antigen} · dose ${scheduleRow.dose_number}` : v.schedule_entry_id}
                   </p>
-                  <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 2 }}>
+                  <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 2 }}>
                     {v.session_type}{v.batch_lot_number ? ` · Batch ${v.batch_lot_number}` : ""}
                   </p>
-                  {v.notes && <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 2, fontStyle: "italic" }}>{v.notes}</p>}
+                  {v.notes && <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 2, fontStyle: "italic" }}>{v.notes}</p>}
                 </div>
-                <p style={{ fontSize: 14, color: COLORS.muted, flexShrink: 0 }}>{fmtDate(v.event_date)}</p>
+                <p style={{ fontSize: 16, color: COLORS.muted, flexShrink: 0 }}>{fmtDate(v.event_date)}</p>
               </div>
             );
           })}
         </div>
       )}
 
-      <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 20, lineHeight: 1.6 }}>
+      <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 20, lineHeight: 1.6 }}>
         Antigens, ages, dosage, route, and site of administration are sourced from the official
         Ministry of Health & Sanitation schedule. The day-thresholds behind "due soon," "overdue,"
         and "defaulter" are still placeholders pending programme confirmation.
@@ -180,15 +180,15 @@ export default function ChildProfilePage({ token, childId, facilities, onBack, o
       {confirmingDelete && (
         <Modal title="Delete this record?" onClose={() => setConfirmingDelete(false)}>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <p style={{ fontSize: 14, color: COLORS.ink, margin: 0, lineHeight: 1.5 }}>
+            <p style={{ fontSize: 16, color: COLORS.ink, margin: 0, lineHeight: 1.5 }}>
               This removes <strong>{child.full_name}</strong> from all lists and dashboards. Their
               vaccination and case history is kept for audit purposes, not permanently erased — an
               administrator can be asked to restore it if this was a mistake.
             </p>
-            {deleteError && <p style={{ fontSize: 14, color: "#8C2E1C", margin: 0 }}>{deleteError}</p>}
+            {deleteError && <p style={{ fontSize: 16, color: "#A1131B", margin: 0 }}>{deleteError}</p>}
             <div style={{ display: "flex", gap: 12 }}>
               <SecondaryButton onClick={() => setConfirmingDelete(false)} style={{ flex: 1 }}>Cancel</SecondaryButton>
-              <PrimaryButton onClick={confirmDelete} disabled={deleting} style={{ flex: 1, backgroundColor: "#8C2E1C" }}>
+              <PrimaryButton onClick={confirmDelete} disabled={deleting} style={{ flex: 1, backgroundColor: "#A1131B" }}>
                 {deleting ? "Deleting…" : "Delete record"}
               </PrimaryButton>
             </div>

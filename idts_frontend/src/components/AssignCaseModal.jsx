@@ -56,9 +56,9 @@ export default function AssignCaseModal({ token, child, dose, priority, onAssign
   return (
     <Modal title={`Assign ${child.full_name}'s case`} onClose={onClose}>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <p style={{ fontSize: 14, color: COLORS.muted, margin: 0 }}>{dose.reason}</p>
+        <p style={{ fontSize: 16, color: COLORS.muted, margin: 0 }}>{dose.reason}</p>
         {priority && (
-          <span style={{ display: "inline-block", width: "fit-content", fontSize: 12, padding: "2px 8px", borderRadius: 999, fontWeight: 500, color: PRIORITY_META[priority].color, backgroundColor: PRIORITY_META[priority].bg }}>
+          <span style={{ display: "inline-block", width: "fit-content", fontSize: 14, padding: "2px 8px", borderRadius: 999, fontWeight: 600, color: PRIORITY_META[priority].color, backgroundColor: PRIORITY_META[priority].bg }}>
             {PRIORITY_META[priority].label}
           </span>
         )}
@@ -66,9 +66,9 @@ export default function AssignCaseModal({ token, child, dose, priority, onAssign
         <div>
           <Label>Assign to</Label>
           {loadingChws ? (
-            <p style={{ fontSize: 14, color: COLORS.muted }}>Loading health workers…</p>
+            <p style={{ fontSize: 16, color: COLORS.muted }}>Loading health workers…</p>
           ) : chws.length === 0 && !showAddChw ? (
-            <p style={{ fontSize: 14, color: COLORS.muted }}>
+            <p style={{ fontSize: 16, color: COLORS.muted }}>
               No health workers on file yet for this facility. Add one below.
             </p>
           ) : (
@@ -86,7 +86,7 @@ export default function AssignCaseModal({ token, child, dose, priority, onAssign
           <button
             type="button"
             onClick={() => setShowAddChw(true)}
-            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, color: COLORS.primary, background: "none", border: "none", cursor: "pointer", padding: 0, width: "fit-content" }}
+            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 16, color: COLORS.primary, background: "none", border: "none", cursor: "pointer", padding: 0, width: "fit-content" }}
           >
             <UserPlus size={15} /> Add new CHW
           </button>
@@ -99,7 +99,7 @@ export default function AssignCaseModal({ token, child, dose, priority, onAssign
               placeholder="e.g. Aminata Sesay"
               autoFocus
             />
-            <p style={{ fontSize: 12, color: COLORS.muted, margin: 0 }}>
+            <p style={{ fontSize: 14, color: COLORS.muted, margin: 0 }}>
               There's no CHW roster on file yet — this creates a basic record for
               this health worker so they can be assigned cases. They don't need
               login credentials for this to work.

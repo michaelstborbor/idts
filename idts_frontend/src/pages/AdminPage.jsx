@@ -210,7 +210,7 @@ function CreateUserModal({ token, onCreated, onClose }) {
         <div>
           <Label>Temporary password</Label>
           <TextInput type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" />
-          <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 4 }}>
+          <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 4 }}>
             Share this with the user directly — they can change it themselves under Account settings.
           </p>
         </div>
@@ -220,7 +220,7 @@ function CreateUserModal({ token, onCreated, onClose }) {
             {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
           </SelectInput>
         </div>
-        <p style={{ fontSize: 12, color: COLORS.muted, margin: "-8px 0 0" }}>{ACCESS_HINTS[role]}</p>
+        <p style={{ fontSize: 14, color: COLORS.muted, margin: "-8px 0 0" }}>{ACCESS_HINTS[role]}</p>
 
         <GeographyFields token={token} role={role} onChange={setGeo} />
 
@@ -288,9 +288,9 @@ function EditUserModal({ token, user, onSaved, onClose }) {
             {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
           </SelectInput>
         </div>
-        <p style={{ fontSize: 12, color: COLORS.muted, margin: "-8px 0 0" }}>{ACCESS_HINTS[role]}</p>
+        <p style={{ fontSize: 14, color: COLORS.muted, margin: "-8px 0 0" }}>{ACCESS_HINTS[role]}</p>
 
-        <div style={{ padding: "10px 12px", borderRadius: 8, backgroundColor: COLORS.subtleBg, fontSize: 13, color: COLORS.muted }}>
+        <div style={{ padding: "10px 12px", borderRadius: 8, backgroundColor: COLORS.subtleBg, fontSize: 15, color: COLORS.muted }}>
           Current assignment: <strong style={{ color: COLORS.ink }}>{user.current_assignment_label || "—"}</strong>.
           {ROLES.includes(role) && role !== "system_admin" ? " To change it, pick a new one below." : ""}
         </div>
@@ -341,11 +341,11 @@ function ResetPasswordModal({ token, user, onClose }) {
     <Modal title={`Reset password — ${user.full_name}`} onClose={onClose}>
       {done ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <p style={{ fontSize: 14, color: "#2F6B4F", margin: 0 }}>Password reset for @{user.username}.</p>
-          <p style={{ fontSize: 14, color: COLORS.ink, margin: 0 }}>
-            New temporary password: <strong style={{ fontFamily: "monospace", fontSize: 15 }}>{password}</strong>
+          <p style={{ fontSize: 16, color: "#10633B", margin: 0 }}>Password reset for @{user.username}.</p>
+          <p style={{ fontSize: 16, color: COLORS.ink, margin: 0 }}>
+            New temporary password: <strong style={{ fontFamily: "monospace", fontSize: 16 }}>{password}</strong>
           </p>
-          <p style={{ fontSize: 12, color: COLORS.muted, margin: 0 }}>
+          <p style={{ fontSize: 14, color: COLORS.muted, margin: 0 }}>
             Share this with the user directly. It won't be shown again after you close this window. They should change it under Account settings.
           </p>
           <PrimaryButton onClick={onClose}>Done</PrimaryButton>
@@ -358,7 +358,7 @@ function ResetPasswordModal({ token, user, onClose }) {
             <button
               type="button"
               onClick={() => setPassword(generateTempPassword())}
-              style={{ marginTop: 8, padding: 0, background: "none", border: "none", cursor: "pointer", fontSize: 13, color: COLORS.primary }}
+              style={{ marginTop: 8, padding: 0, background: "none", border: "none", cursor: "pointer", fontSize: 15, color: COLORS.primary }}
             >
               Generate a random password
             </button>
@@ -454,14 +454,14 @@ export default function AdminPage({ token, facilities, currentUserId }) {
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
         <button
           onClick={() => setShowCreate(true)}
-          style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 8, fontSize: 14, fontWeight: 500, color: "#fff", backgroundColor: COLORS.primary, border: "none", cursor: "pointer" }}
+          style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 8, fontSize: 16, fontWeight: 600, color: "#fff", backgroundColor: COLORS.primary, border: "none", cursor: "pointer" }}
         >
           <UserPlus size={16} /> Create user
         </button>
       </div>
 
       {error && (
-        <p style={{ fontSize: 14, color: "#8C2E1C", backgroundColor: "#F6D9D2", padding: "10px 14px", borderRadius: 8, marginBottom: 16 }}>
+        <p style={{ fontSize: 16, color: "#A1131B", backgroundColor: "#FDE1E2", padding: "10px 14px", borderRadius: 8, marginBottom: 16 }}>
           {error}
         </p>
       )}
@@ -476,12 +476,12 @@ export default function AdminPage({ token, facilities, currentUserId }) {
               style={{ padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, borderTop: i === 0 ? "none" : `1px solid ${COLORS.border}`, opacity: u.is_active ? 1 : 0.55 }}
             >
               <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: 15, fontWeight: 500, color: COLORS.ink, margin: 0 }}>
+                <p style={{ fontSize: 16, fontWeight: 600, color: COLORS.ink, margin: 0 }}>
                   {u.full_name} <span style={{ color: COLORS.muted, fontWeight: 400 }}>@{u.username}</span>
-                  {u.role === "system_admin" && <span style={{ marginLeft: 8 }}><Pill label="Admin" color="#1D4E4A" bg="#DCEBE8" /></span>}
-                  {u.id === currentUserId && <span style={{ marginLeft: 6 }}><Pill label="You" color="#6B6660" bg="#EDEBE6" /></span>}
+                  {u.role === "system_admin" && <span style={{ marginLeft: 8 }}><Pill label="Admin" color="#0A5A8A" bg="#DCEBF5" /></span>}
+                  {u.id === currentUserId && <span style={{ marginLeft: 6 }}><Pill label="You" color="#475867" bg="#E8EDF1" /></span>}
                 </p>
-                <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 2 }}>
+                <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 2 }}>
                   {ROLE_LABELS[u.role] || u.role} · {assignmentLabel(u)}
                   {!u.is_active ? " · Deactivated" : ""}
                 </p>
@@ -504,11 +504,11 @@ export default function AdminPage({ token, facilities, currentUserId }) {
                       disabled={togglingId === u.id || removingId === u.id}
                       title={u.is_active ? "Deactivate" : "Reactivate"}
                       style={{
-                        padding: 8, borderRadius: 8, border: `1px solid ${u.is_active ? "#F6D9D2" : COLORS.inputBorder}`,
-                        backgroundColor: u.is_active ? "#FBE9E4" : COLORS.subtleBg, cursor: "pointer", display: "flex", flexShrink: 0,
+                        padding: 8, borderRadius: 8, border: `1px solid ${u.is_active ? "#FDE1E2" : COLORS.inputBorder}`,
+                        backgroundColor: u.is_active ? "#FFE6D5" : COLORS.subtleBg, cursor: "pointer", display: "flex", flexShrink: 0,
                       }}
                     >
-                      {u.is_active ? <UserX size={15} color="#8C2E1C" /> : <UserCheck size={15} color={COLORS.ink} />}
+                      {u.is_active ? <UserX size={15} color="#A1131B" /> : <UserCheck size={15} color={COLORS.ink} />}
                     </button>
                     <button
                       onClick={() => setResetTarget(u)}
@@ -525,11 +525,11 @@ export default function AdminPage({ token, facilities, currentUserId }) {
                       disabled={togglingId === u.id || removingId === u.id}
                       title="Remove permanently"
                       style={{
-                        padding: 8, borderRadius: 8, border: "1px solid #F6D9D2", backgroundColor: "#FBE9E4",
+                        padding: 8, borderRadius: 8, border: "1px solid #FDE1E2", backgroundColor: "#FFE6D5",
                         cursor: "pointer", display: "flex", flexShrink: 0,
                       }}
                     >
-                      <Trash2 size={15} color="#8C2E1C" />
+                      <Trash2 size={15} color="#A1131B" />
                     </button>
                   </>
                 )}

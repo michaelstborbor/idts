@@ -83,7 +83,7 @@ function FacilityPicker({ token, role, value, onChange }) {
     return (
       <div>
         <Label>Facility</Label>
-        <p style={{ fontSize: 14, color: COLORS.ink, padding: "10px 12px", borderRadius: 8, backgroundColor: COLORS.subtleBg, margin: 0 }}>
+        <p style={{ fontSize: 16, color: COLORS.ink, padding: "10px 12px", borderRadius: 8, backgroundColor: COLORS.subtleBg, margin: 0 }}>
           {fixedFacility ? fixedFacility.name : "Loading…"}
         </p>
       </div>
@@ -238,7 +238,7 @@ export default function ChildForm({ token, currentUser, mode = "create", initial
                   key={s}
                   onClick={() => setSex(s)}
                   style={{
-                    flex: 1, padding: "10px 0", fontSize: 14, fontWeight: 500, border: "none", cursor: "pointer",
+                    flex: 1, padding: "10px 0", fontSize: 16, fontWeight: 600, border: "none", cursor: "pointer",
                     backgroundColor: sex === s ? COLORS.primary : COLORS.white,
                     color: sex === s ? COLORS.white : COLORS.ink,
                   }}
@@ -280,7 +280,7 @@ export default function ChildForm({ token, currentUser, mode = "create", initial
         </div>
 
         {duplicates && duplicates.length > 0 && (
-          <div style={{ padding: "12px 14px", borderRadius: 8, backgroundColor: "#FBF1DC", color: "#8A6A1F", fontSize: 14, lineHeight: 1.5 }}>
+          <div style={{ padding: "12px 14px", borderRadius: 8, backgroundColor: "#FFF1CC", color: "#7A4D00", fontSize: 16, lineHeight: 1.5 }}>
             <strong>Possible existing record{duplicates.length > 1 ? "s" : ""} found:</strong>
             <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
               {duplicates.map((d) => (

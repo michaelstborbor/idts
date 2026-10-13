@@ -1,16 +1,28 @@
 import { AlertCircle, CheckCircle2, Clock, Info } from "lucide-react";
 
+// Clinical palette: a deep "health service" blue for structure and actions,
+// a protective green reserved for doses given / fully immunized, and warm
+// alert colours only where a child needs attention. Text colours all clear
+// WCAG AA (most AAA) on white so screens stay readable in bright clinics.
 export const COLORS = {
-  bg: "#FAF8F5",
-  ink: "#2B2B28",
-  muted: "#8A8478",
-  border: "#EAE6DD",
-  inputBorder: "#D9D4C9",
-  primary: "#1D4E4A",
+  bg: "#F2F6F8",
+  ink: "#10222E",
+  muted: "#4F6170",
+  border: "#D3DEE5",
+  inputBorder: "#9FB2BF",
+  primary: "#0A5A8A",
   white: "#FFFFFF",
-  subtleBg: "#F7F5F0",
-  chipBg: "#EFEBE3",
+  subtleBg: "#EAF1F5",
+  chipBg: "#E3ECF2",
+  primaryDark: "#073F63",
+  primaryTint: "#DCEBF5",
+  protect: "#10633B",
+  protectTint: "#DDF3E6",
+  danger: "#A1131B",
+  dangerTint: "#FDE1E2",
 };
+
+export const FONT_STACK = "'Atkinson Hyperlegible Next', 'Segoe UI', Roboto, system-ui, sans-serif";
 
 // Shared content width: wide enough to use up a tablet/desktop screen
 // instead of a narrow centered column, capped so text/tables stay readable
@@ -33,27 +45,30 @@ export function facilityOptionLabel(f) {
   return f.chiefdom ? `${f.name} — ${f.chiefdom}` : f.name;
 }
 
+// Status colours escalate with urgency: neutral -> amber -> orange -> solid
+// red for defaulters, so the most urgent rows read at a glance even on a
+// dim phone screen. Every badge also carries an icon + word, never colour alone.
 export const STATUS_META = {
-  not_yet_due: { label: "Not yet due", color: "#8A8478", bg: "#F1EFEA", icon: Clock },
-  due_soon: { label: "Due soon", color: "#8A6A1F", bg: "#FBF1DC", icon: Clock },
-  due: { label: "Due", color: "#B4472F", bg: "#FBE9E4", icon: AlertCircle },
-  overdue: { label: "Overdue", color: "#B4472F", bg: "#FBE9E4", icon: AlertCircle },
-  defaulter: { label: "Defaulter", color: "#8C2E1C", bg: "#F6D9D2", icon: AlertCircle },
-  administered: { label: "Given", color: "#2F6B4F", bg: "#E4F1EA", icon: CheckCircle2 },
-  not_applicable: { label: "Needs review", color: "#6B6660", bg: "#EDEBE6", icon: Info },
+  not_yet_due: { label: "Not yet due", chart: "#8FA3B1", color: "#3E5160", bg: "#E8EDF1", border: "#CBD6DE", icon: Clock },
+  due_soon: { label: "Due soon", chart: "#E0A100", color: "#6A4300", bg: "#FFF1CC", border: "#F2D27A", icon: Clock },
+  due: { label: "Due", chart: "#E36A1E", color: "#8F3305", bg: "#FFE6D5", border: "#F5B58C", icon: AlertCircle },
+  overdue: { label: "Overdue", chart: "#C9501A", color: "#8F3305", bg: "#FFE6D5", border: "#F5B58C", icon: AlertCircle },
+  defaulter: { label: "Defaulter", chart: "#B3141D", color: "#FFFFFF", bg: "#B3141D", border: "#B3141D", icon: AlertCircle },
+  administered: { label: "Given", chart: "#1E8A52", color: "#0B5530", bg: "#DDF3E6", border: "#9ED6B4", icon: CheckCircle2 },
+  not_applicable: { label: "Needs review", chart: "#6B7F8E", color: "#3E5160", bg: "#E8EDF1", border: "#CBD6DE", icon: Info },
 };
 
 export const PRIORITY_META = {
-  high: { label: "High priority", color: "#8C2E1C", bg: "#F6D9D2" },
-  medium: { label: "Medium priority", color: "#8A6A1F", bg: "#FBF1DC" },
-  low: { label: "Low priority", color: "#6B6660", bg: "#EDEBE6" },
+  high: { label: "High priority", color: "#A1131B", bg: "#FDE1E2" },
+  medium: { label: "Medium priority", color: "#6A4300", bg: "#FFF1CC" },
+  low: { label: "Low priority", color: "#3E5160", bg: "#E8EDF1" },
 };
 
 export const CASE_STATUS_META = {
-  assigned: { label: "Assigned", color: "#8A6A1F", bg: "#FBF1DC" },
-  in_tracing: { label: "In tracing", color: "#8A6A1F", bg: "#FBF1DC" },
-  return_pending_confirmation: { label: "Return pending confirmation", color: "#2F6B4F", bg: "#E4F1EA" },
-  closed: { label: "Closed", color: "#6B6660", bg: "#EDEBE6" },
+  assigned: { label: "Assigned", color: "#6A4300", bg: "#FFF1CC" },
+  in_tracing: { label: "In tracing", color: "#6A4300", bg: "#FFF1CC" },
+  return_pending_confirmation: { label: "Return pending confirmation", color: "#0B5530", bg: "#DDF3E6" },
+  closed: { label: "Closed", color: "#3E5160", bg: "#E8EDF1" },
 };
 
 export const SESSION_TYPES = [

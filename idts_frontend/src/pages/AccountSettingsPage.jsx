@@ -57,16 +57,16 @@ export default function AccountSettingsPage({ token, currentUser, onProfileUpdat
     <div style={{ maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column", gap: 32 }}>
       <button
         onClick={onBack}
-        style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, color: COLORS.primary, background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: -16, alignSelf: "flex-start" }}
+        style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 16, color: COLORS.primary, background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: -16, alignSelf: "flex-start" }}
       >
         <ChevronLeft size={16} /> Back
       </button>
       <div>
-        <h3 style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6B6660", marginBottom: 12 }}>
+        <h3 style={{ fontSize: 18, fontWeight: 700, color: "#10222E", marginBottom: 12 }}>
           Profile
         </h3>
         <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, padding: 20, backgroundColor: COLORS.white, display: "flex", flexDirection: "column", gap: 16 }}>
-          <p style={{ fontSize: 13, color: COLORS.muted, margin: 0 }}>
+          <p style={{ fontSize: 15, color: COLORS.muted, margin: 0 }}>
             Username: <strong style={{ color: COLORS.ink }}>{currentUser.username}</strong> ·
             Role: <strong style={{ color: COLORS.ink }}>{currentUser.role.replace(/_/g, " ")}</strong>
             <br />Username and role can only be changed by an administrator.
@@ -76,7 +76,7 @@ export default function AccountSettingsPage({ token, currentUser, onProfileUpdat
             <TextInput value={fullName} onChange={(e) => { setFullName(e.target.value); setProfileSaved(false); }} />
           </div>
           <ErrorText>{profileError}</ErrorText>
-          {profileSaved && <p style={{ fontSize: 14, color: "#2F6B4F", margin: 0 }}>Saved.</p>}
+          {profileSaved && <p style={{ fontSize: 16, color: "#10633B", margin: 0 }}>Saved.</p>}
           <PrimaryButton onClick={saveProfile} disabled={savingProfile}>
             {savingProfile ? "Saving…" : "Save name"}
           </PrimaryButton>
@@ -84,7 +84,7 @@ export default function AccountSettingsPage({ token, currentUser, onProfileUpdat
       </div>
 
       <div>
-        <h3 style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6B6660", marginBottom: 12 }}>
+        <h3 style={{ fontSize: 18, fontWeight: 700, color: "#10222E", marginBottom: 12 }}>
           Change password
         </h3>
         <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, padding: 20, backgroundColor: COLORS.white, display: "flex", flexDirection: "column", gap: 16 }}>
@@ -101,7 +101,7 @@ export default function AccountSettingsPage({ token, currentUser, onProfileUpdat
             <TextInput type="password" value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setPasswordSaved(false); }} />
           </div>
           <ErrorText>{passwordError}</ErrorText>
-          {passwordSaved && <p style={{ fontSize: 14, color: "#2F6B4F", margin: 0 }}>Password changed.</p>}
+          {passwordSaved && <p style={{ fontSize: 16, color: "#10633B", margin: 0 }}>Password changed.</p>}
           <PrimaryButton onClick={savePassword} disabled={savingPassword}>
             {savingPassword ? "Saving…" : "Change password"}
           </PrimaryButton>

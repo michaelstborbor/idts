@@ -32,7 +32,7 @@ export default function DueDefaulterListPage({ dueRows, activeCasesByKey, loadin
             key={t.value}
             onClick={() => setStatusFilter(t.value)}
             style={{
-              padding: "6px 12px", borderRadius: 999, fontSize: 14, fontWeight: 500, cursor: "pointer",
+              minHeight: 40, padding: "6px 14px", borderRadius: 999, fontSize: 16, fontWeight: 600, cursor: "pointer",
               border: `1px solid ${statusFilter === t.value ? COLORS.primary : COLORS.inputBorder}`,
               backgroundColor: statusFilter === t.value ? COLORS.primary : COLORS.white,
               color: statusFilter === t.value ? COLORS.white : COLORS.ink,
@@ -45,9 +45,9 @@ export default function DueDefaulterListPage({ dueRows, activeCasesByKey, loadin
 
       {rows.length === 0 ? (
         <div style={{ textAlign: "center", padding: "64px 0", borderRadius: 12, border: `1px solid ${COLORS.border}` }}>
-          <CheckCircle2 size={28} style={{ color: "#B8B2A5", margin: "0 auto" }} />
-          <p style={{ marginTop: 12, fontWeight: 500, color: COLORS.ink }}>Nothing matches this filter</p>
-          <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 4 }}>
+          <CheckCircle2 size={28} style={{ color: "#8FA3B1", margin: "0 auto" }} />
+          <p style={{ marginTop: 12, fontWeight: 600, color: COLORS.ink }}>Nothing matches this filter</p>
+          <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 4 }}>
             {dueRows.length === 0 ? "No children are currently due, overdue, or defaulters." : "Try a different filter."}
           </p>
         </div>
@@ -59,24 +59,25 @@ export default function DueDefaulterListPage({ dueRows, activeCasesByKey, loadin
             return (
               <div
                 key={key}
+                className="list-row"
                 style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "14px 16px", borderTop: i === 0 ? "none" : `1px solid ${COLORS.border}` }}
               >
                 <button
                   onClick={() => onOpenChild(r.child.id)}
                   style={{ minWidth: 0, textAlign: "left", flex: 1, background: "none", border: "none", cursor: "pointer", padding: 0 }}
                 >
-                  <p style={{ fontWeight: 500, fontSize: 15, color: COLORS.ink, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <p style={{ fontWeight: 600, fontSize: 16, color: COLORS.ink, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {r.child.full_name}
                   </p>
-                  <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 2 }}>
+                  <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 2 }}>
                     {r.dose.antigen} dose {r.dose.dose_number}
                   </p>
-                  <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 2 }}>{r.dose.reason}</p>
+                  <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 2 }}>{r.dose.reason}</p>
                 </button>
                 <div style={{ textAlign: "right", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
                   <StatusBadge status={r.dose.status} />
                   {r.priority && (
-                    <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, fontWeight: 500, color: PRIORITY_META[r.priority].color, backgroundColor: PRIORITY_META[r.priority].bg }}>
+                    <span style={{ fontSize: 14, padding: "2px 8px", borderRadius: 999, fontWeight: 600, color: PRIORITY_META[r.priority].color, backgroundColor: PRIORITY_META[r.priority].bg }}>
                       {PRIORITY_META[r.priority].label}
                     </span>
                   )}
@@ -85,9 +86,9 @@ export default function DueDefaulterListPage({ dueRows, activeCasesByKey, loadin
                       <button
                         onClick={() => onOpenCase(r.child, activeCase)}
                         style={{
-                          fontSize: 12, padding: "3px 10px", borderRadius: 999, fontWeight: 500, textDecoration: "underline",
+                          fontSize: 15, minHeight: 40, padding: "6px 14px", borderRadius: 10, fontWeight: 700, textDecoration: "underline",
                           border: "none", cursor: "pointer",
-                          color: "#8A6A1F", backgroundColor: "#FBF1DC",
+                          color: "#7A4D00", backgroundColor: "#FFF1CC",
                         }}
                       >
                         View case
@@ -95,7 +96,7 @@ export default function DueDefaulterListPage({ dueRows, activeCasesByKey, loadin
                     ) : (
                       <button
                         onClick={() => onAssign(r.child, r.dose, r.priority)}
-                        style={{ fontSize: 12, padding: "4px 12px", borderRadius: 999, fontWeight: 500, color: "#fff", backgroundColor: COLORS.primary, border: "none", cursor: "pointer" }}
+                        style={{ fontSize: 15, minHeight: 40, padding: "6px 18px", borderRadius: 10, fontWeight: 700, color: "#fff", backgroundColor: COLORS.primary, border: "none", cursor: "pointer" }}
                       >
                         Assign
                       </button>
@@ -108,7 +109,7 @@ export default function DueDefaulterListPage({ dueRows, activeCasesByKey, loadin
         </div>
       )}
 
-      <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 20, lineHeight: 1.6 }}>
+      <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 20, lineHeight: 1.6 }}>
         Priority on defaulter cases is a transparent, weighted score (days overdue + number of
         missed doses) computed by the backend — not a black-box prediction.
       </p>

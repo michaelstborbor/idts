@@ -50,8 +50,8 @@ function SearchForChildPane({ token, onSearched }) {
 
   return (
     <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, padding: 20, backgroundColor: COLORS.white, marginBottom: 20 }}>
-      <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.ink, margin: "0 0 4px" }}>Search for a child</p>
-      <p style={{ fontSize: 13, color: COLORS.muted, margin: "0 0 14px" }}>
+      <p style={{ fontSize: 15, fontWeight: 600, color: COLORS.ink, margin: "0 0 4px" }}>Search for a child</p>
+      <p style={{ fontSize: 15, color: COLORS.muted, margin: "0 0 14px" }}>
         Check across the whole district before registering, in case this child already has a record at a different facility.
       </p>
       <div className="responsive-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
@@ -79,26 +79,26 @@ function SearchForChildPane({ token, onSearched }) {
 
       {results && (
         results.length === 0 ? (
-          <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 16 }}>No matching record found in the district. Safe to register.</p>
+          <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 16 }}>No matching record found in the district. Safe to register.</p>
         ) : (
           <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: "#8A6A1F", margin: 0 }}>
+            <p style={{ fontSize: 15, fontWeight: 600, color: "#7A4D00", margin: 0 }}>
               {results.length} possible match{results.length > 1 ? "es" : ""} found:
             </p>
             {results.map((c) => (
-              <div key={c.id} style={{ padding: "12px 14px", borderRadius: 8, backgroundColor: "#FBF1DC", border: "1px solid #F0DDAE" }}>
-                <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.ink, margin: 0 }}>
+              <div key={c.id} style={{ padding: "12px 14px", borderRadius: 8, backgroundColor: "#FFF1CC", border: "1px solid #F0DDAE" }}>
+                <p style={{ fontSize: 16, fontWeight: 600, color: COLORS.ink, margin: 0 }}>
                   {c.full_name} <span style={{ fontWeight: 400, color: COLORS.muted }}>· {c.system_id}</span>
-                  {c.fully_immunized && <span style={{ marginLeft: 8 }}><ShieldCheck size={13} style={{ verticalAlign: "-2px" }} color="#2F6B4F" /></span>}
+                  {c.fully_immunized && <span style={{ marginLeft: 8 }}><ShieldCheck size={13} style={{ verticalAlign: "-2px" }} color="#10633B" /></span>}
                 </p>
-                <p style={{ fontSize: 13, color: COLORS.muted, marginTop: 4, lineHeight: 1.6 }}>
+                <p style={{ fontSize: 15, color: COLORS.muted, marginTop: 4, lineHeight: 1.6 }}>
                   {ageLabel(c.dob)} · {c.sex === "F" ? "Female" : "Male"} · {c.facility_name || "Unknown facility"}
                   {c.caregiver_name ? <><br />Caregiver: {c.caregiver_name}{c.caregiver_phone ? ` · ${c.caregiver_phone}` : ""}</> : null}
                   {c.address ? <><br />Address: {c.address}</> : null}
                 </p>
               </div>
             ))}
-            <p style={{ fontSize: 12, color: COLORS.muted, margin: 0 }}>
+            <p style={{ fontSize: 14, color: COLORS.muted, margin: 0 }}>
               If none of these is the child in front of you, go ahead and register.
             </p>
           </div>
@@ -131,13 +131,13 @@ export default function ChildrenListPage({ token, children, dueRowsByChildId, fu
     <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto 20px", display: "flex", gap: 8, flexWrap: "wrap" }}>
       <button
         onClick={() => setShowSearch((s) => !s)}
-        style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 8, fontSize: 14, fontWeight: 500, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer" }}
+        style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 44, padding: "10px 18px", borderRadius: 10, fontSize: 16, fontWeight: 600, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer" }}
       >
         {showSearch ? <X size={15} /> : <Search size={15} />} {showSearch ? "Hide search" : "Search for child"}
       </button>
       <button
         onClick={handleRegisterClick}
-        style={{ padding: "10px 16px", borderRadius: 8, fontSize: 14, fontWeight: 500, color: "#fff", backgroundColor: COLORS.primary, border: "none", cursor: "pointer" }}
+        style={{ minHeight: 44, padding: "10px 18px", borderRadius: 10, fontSize: 16, fontWeight: 600, color: "#fff", backgroundColor: COLORS.primary, border: "none", cursor: "pointer" }}
       >
         Register child
       </button>
@@ -154,9 +154,9 @@ export default function ChildrenListPage({ token, children, dueRowsByChildId, fu
           </div>
         )}
         <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto", textAlign: "center", padding: "64px 0", borderRadius: 12, border: `1px solid ${COLORS.border}` }}>
-          <Users size={28} style={{ color: "#B8B2A5", margin: "0 auto" }} />
-          <p style={{ marginTop: 12, fontWeight: 500, color: COLORS.ink }}>No children registered yet</p>
-          <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 4 }}>
+          <Users size={28} style={{ color: "#8FA3B1", margin: "0 auto" }} />
+          <p style={{ marginTop: 12, fontWeight: 600, color: COLORS.ink }}>No children registered yet</p>
+          <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 4 }}>
             Register the first child to see auto-calculated due dates.
           </p>
         </div>
@@ -180,30 +180,31 @@ export default function ChildrenListPage({ token, children, dueRowsByChildId, fu
             <button
               key={c.id}
               onClick={() => onOpenChild(c.id)}
+              className="list-row"
               style={{
                 width: "100%", textAlign: "left", padding: "14px 16px", display: "flex", alignItems: "center",
                 justifyContent: "space-between", gap: 12, background: "none", border: "none", cursor: "pointer",
                 borderTop: i === 0 ? "none" : `1px solid ${COLORS.border}`,
               }}
             >
-              <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ minWidth: 0, flex: "1 1 auto", display: "flex", alignItems: "center", gap: 10 }}>
                 {isFullyImmunized && (
-                  <span title="Fully Immunized (FIC)" aria-label="Fully Immunized" style={{ flexShrink: 0, display: "flex", backgroundColor: "#2F6B4F", borderRadius: 999, padding: 7 }}>
+                  <span title="Fully Immunized (FIC)" aria-label="Fully Immunized" style={{ flexShrink: 0, display: "flex", backgroundColor: "#10633B", borderRadius: 999, padding: 7 }}>
                     <ShieldCheck size={18} color="#FFFFFF" />
                   </span>
                 )}
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ fontWeight: 500, fontSize: 15, color: COLORS.ink, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.full_name}</p>
-                  <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 2 }}>{ageLabel(c.dob)} · {c.system_id}</p>
+                  <p style={{ fontWeight: 600, fontSize: 16, color: COLORS.ink, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.full_name}</p>
+                  <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 2 }}>{ageLabel(c.dob)} · <span style={{ whiteSpace: "nowrap" }}>{c.system_id}</span></p>
                 </div>
               </div>
               {next ? (
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div style={{ textAlign: "right", flex: "0 1 auto", minWidth: 0, maxWidth: "48%" }}>
                   <StatusBadge status={next.dose.status} />
-                  <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 4 }}>{next.dose.antigen} dose {next.dose.dose_number}</p>
+                  <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 4 }}>{next.dose.antigen} dose {next.dose.dose_number}</p>
                 </div>
               ) : isFullyImmunized ? (
-                <span style={{ fontSize: 12, fontWeight: 500, color: "#2F6B4F", flexShrink: 0 }}>Fully Immunized</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#10633B", flexShrink: 0 }}>Fully Immunized</span>
               ) : null}
             </button>
           );

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { FileText, LogOut, Menu as MenuIcon, Settings, UserPlus } from "lucide-react";
+import { FileText, LogOut, Menu as MenuIcon, Settings, Syringe, UserPlus } from "lucide-react";
 import { api, getStoredToken, setStoredToken } from "./api/client.js";
-import { COLORS, CONTENT_MAX_WIDTH } from "./constants.js";
+import { COLORS, CONTENT_MAX_WIDTH, FONT_STACK } from "./constants.js";
 import LoginPage from "./pages/LoginPage.jsx";
 import ChildForm from "./pages/ChildForm.jsx";
 import ChildrenListPage from "./pages/ChildrenListPage.jsx";
@@ -15,6 +15,11 @@ import ReportsPage from "./pages/ReportsPage.jsx";
 import AefiPage from "./pages/AefiPage.jsx";
 import AssignCaseModal from "./components/AssignCaseModal.jsx";
 import CaseDetailModal from "./components/CaseDetailModal.jsx";
+
+const menuItemStyle = {
+  width: "100%", textAlign: "left", padding: "0 16px", minHeight: 48, fontSize: 16, color: COLORS.ink,
+  backgroundColor: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 12,
+};
 
 const BASE_NAV_TABS = [
   { value: "dashboard", label: "Dashboard" },
@@ -147,111 +152,135 @@ export default function App() {
     followup: "Defaulter follow-up",
     aefi: "Adverse events following immunization (AEFI)",
     reports: "Reports",
-    admin: "Admin — user management",
+    admin: "User management",
     account: "Account settings",
     register: "Register a child",
+    profile: "Child record",
     edit: editingChild ? `Edit ${editingChild.full_name}` : "Edit child",
   }[view] || "Children & immunization status";
 
   return (
-    <div style={{ backgroundColor: COLORS.bg, minHeight: "100vh", fontFamily: "'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif" }}>
-      <div style={{ padding: "20px 20px 0" }} className="app-header-pad">
-        <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto 28px" }}>
-          <div className="app-header-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-            <div>
-              <p style={{ fontSize: 12, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", color: COLORS.primary, marginBottom: 4 }}>
-                IDTS
-              </p>
-              <h1 style={{ fontSize: 26, fontWeight: 600, color: COLORS.ink, margin: 0 }}>{viewTitle}</h1>
+    <div style={{ backgroundColor: COLORS.bg, minHeight: "100vh", fontFamily: FONT_STACK, color: COLORS.ink }}>
+      <header className="app-bar" style={{ backgroundColor: COLORS.primaryDark, color: COLORS.white, padding: "0 20px", position: "sticky", top: 0, zIndex: 30, boxShadow: "0 2px 10px rgba(7,63,99,0.25)" }}>
+        <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, minHeight: 64 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+              <span aria-hidden="true" style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: COLORS.white, color: COLORS.primaryDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Syringe size={22} strokeWidth={2.25} />
+              </span>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontSize: 19, fontWeight: 700, margin: 0, lineHeight: 1.1, letterSpacing: "0.02em" }}>IDTS</p>
+                <p className="app-bar-tagline" style={{ fontSize: 14, margin: 0, color: "rgba(255,255,255,0.82)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  Immunization &amp; defaulter tracking
+                </p>
+              </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
-              <p style={{ fontSize: 13, color: COLORS.muted, margin: 0, textAlign: "right" }}>
-                <strong style={{ color: COLORS.ink, fontWeight: 600 }}>{currentUser.full_name}</strong>
-                <br />
-                {currentUser.role.replace(/_/g, " ")}
-              </p>
-              <div className="app-header-actions" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {showRegisterButton && (
-                  <button
-                    onClick={() => setView("register")}
-                    className="icon-btn"
-                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 8, fontSize: 14, fontWeight: 500, color: "#fff", backgroundColor: COLORS.primary, border: "none", cursor: "pointer" }}
-                  >
-                    <UserPlus size={16} /> Register child
-                  </button>
-                )}
-                <div style={{ position: "relative" }}>
-                  <button
-                    onClick={() => setMenuOpen((open) => !open)}
-                    title="Menu"
-                    className="icon-btn"
-                    style={{ padding: 10, borderRadius: 8, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer", display: "flex" }}
-                  >
-                    <MenuIcon size={16} />
-                  </button>
-                  {menuOpen && (
-                    <>
-                      {/* Invisible full-screen layer: clicking anywhere outside the
-                          menu closes it. Sits below the menu itself (lower z-index). */}
-                      <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />
-                      <div
-                        className="menu-dropdown"
-                        style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, minWidth: 190, backgroundColor: COLORS.white, border: `1px solid ${COLORS.border}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", overflow: "hidden", zIndex: 21 }}
-                      >
-                        {canSeeReports && (
-                          <button
-                            onClick={() => { setView("reports"); setMenuOpen(false); }}
-                            className="menu-item"
-                            style={{ width: "100%", textAlign: "left", padding: "11px 16px", fontSize: 14, color: COLORS.ink, backgroundColor: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}
-                          >
-                            <FileText size={15} /> Reports
-                          </button>
-                        )}
-                        <button
-                          onClick={() => { if (view !== "account") setViewBeforeAccount(view); setView("account"); setMenuOpen(false); }}
-                          className="menu-item"
-                          style={{ width: "100%", textAlign: "left", padding: "11px 16px", fontSize: 14, color: COLORS.ink, backgroundColor: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, borderTop: `1px solid ${COLORS.border}` }}
-                        >
-                          <Settings size={15} /> Settings
-                        </button>
-                        <button
-                          onClick={() => { setMenuOpen(false); handleLogout(); }}
-                          className="menu-item"
-                          style={{ width: "100%", textAlign: "left", padding: "11px 16px", fontSize: 14, color: "#8C2E1C", backgroundColor: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, borderTop: `1px solid ${COLORS.border}` }}
-                        >
-                          <LogOut size={15} /> Logout
-                        </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+              <div className="app-bar-user" style={{ textAlign: "right", marginRight: 4 }}>
+                <p style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{currentUser.full_name}</p>
+                <p style={{ fontSize: 14, margin: 0, color: "rgba(255,255,255,0.82)", textTransform: "capitalize" }}>{currentUser.role.replace(/_/g, " ")}</p>
+              </div>
+              {showRegisterButton && (
+                <button
+                  onClick={() => setView("register")}
+                  className="icon-btn"
+                  style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 44, padding: "0 16px", borderRadius: 10, fontSize: 16, fontWeight: 600, color: COLORS.primaryDark, backgroundColor: COLORS.white, border: "none", cursor: "pointer" }}
+                >
+                  <UserPlus size={18} /> Register child
+                </button>
+              )}
+              <div style={{ position: "relative" }}>
+                <button
+                  onClick={() => setMenuOpen((open) => !open)}
+                  title="Menu"
+                  aria-label="Menu"
+                  aria-expanded={menuOpen}
+                  className="icon-btn"
+                  style={{ width: 44, height: 44, borderRadius: 10, color: COLORS.white, backgroundColor: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.35)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                >
+                  <MenuIcon size={20} />
+                </button>
+                {menuOpen && (
+                  <>
+                    {/* Invisible full-screen layer: clicking anywhere outside the
+                        menu closes it. Sits below the menu itself (lower z-index). */}
+                    <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />
+                    <div
+                      className="menu-dropdown"
+                      style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, minWidth: 220, backgroundColor: COLORS.white, border: `1px solid ${COLORS.border}`, borderRadius: 12, boxShadow: "0 12px 28px rgba(7,63,99,0.18)", overflow: "hidden", zIndex: 21 }}
+                    >
+                      <div style={{ padding: "12px 16px", borderBottom: `1px solid ${COLORS.border}`, backgroundColor: COLORS.subtleBg }}>
+                        <p style={{ fontSize: 15, fontWeight: 600, margin: 0, color: COLORS.ink }}>{currentUser.full_name}</p>
+                        <p style={{ fontSize: 14, margin: 0, color: COLORS.muted, textTransform: "capitalize" }}>{currentUser.role.replace(/_/g, " ")}</p>
                       </div>
-                    </>
-                  )}
-                </div>
+                      {canSeeReports && (
+                        <button
+                          onClick={() => { setView("reports"); setMenuOpen(false); }}
+                          className="menu-item"
+                          style={menuItemStyle}
+                        >
+                          <FileText size={18} /> Reports
+                        </button>
+                      )}
+                      <button
+                        onClick={() => { if (view !== "account") setViewBeforeAccount(view); setView("account"); setMenuOpen(false); }}
+                        className="menu-item"
+                        style={{ ...menuItemStyle, borderTop: `1px solid ${COLORS.border}` }}
+                      >
+                        <Settings size={18} /> Settings
+                      </button>
+                      <button
+                        onClick={() => { setMenuOpen(false); handleLogout(); }}
+                        className="menu-item"
+                        style={{ ...menuItemStyle, color: COLORS.danger, borderTop: `1px solid ${COLORS.border}` }}
+                      >
+                        <LogOut size={18} /> Logout
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
+          {showTabBar && (
+            <nav className="app-nav" aria-label="Main" style={{ display: "flex", gap: 4, overflowX: "auto", margin: "0 -8px" }}>
+              {navTabs.map((t) => {
+                const active = view === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    onClick={() => setView(t.value)}
+                    aria-current={active ? "page" : undefined}
+                    className={`nav-tab${active ? " active" : ""}`}
+                    style={{
+                      padding: "12px 14px 10px", fontSize: 16, fontWeight: active ? 700 : 500, border: "none", cursor: "pointer",
+                      whiteSpace: "nowrap", flexShrink: 0, borderRadius: "8px 8px 0 0", backgroundColor: "transparent",
+                      color: active ? COLORS.white : "rgba(255,255,255,0.8)",
+                      borderBottom: `4px solid ${active ? "#5FD39A" : "transparent"}`,
+                    }}
+                  >
+                    {t.label}
+                    {t.value === "followup" && activeCaseCount > 0 && (
+                      <span style={{ marginLeft: 8, padding: "1px 8px", borderRadius: 999, fontSize: 14, fontWeight: 700, backgroundColor: "#FFD24D", color: COLORS.ink }}>
+                        {activeCaseCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+          )}
+        </div>
+      </header>
+
+      <div style={{ padding: "0 20px" }}>
+        <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto", padding: "28px 0 20px" }}>
+          <h1 className="page-title" style={{ fontSize: 28, fontWeight: 700, color: COLORS.ink, margin: 0 }}>{viewTitle}</h1>
           {dataError && (
-            <p style={{ marginTop: 12, fontSize: 14, color: "#8C2E1C", backgroundColor: "#F6D9D2", padding: "10px 14px", borderRadius: 8 }}>
+            <p role="alert" style={{ marginTop: 12, marginBottom: 0, fontSize: 16, color: COLORS.danger, backgroundColor: COLORS.dangerTint, padding: "12px 16px", borderRadius: 10 }}>
               {dataError}
             </p>
-          )}
-
-          {showTabBar && (
-            <div style={{ display: "flex", gap: 4, marginTop: 20, padding: 6, borderRadius: 10, backgroundColor: COLORS.primary, width: "fit-content", maxWidth: "100%", flexWrap: "wrap", boxShadow: "0 1px 3px rgba(0,0,0,0.12)" }}>
-              {navTabs.map((t) => (
-                <button
-                  key={t.value}
-                  onClick={() => setView(t.value)}
-                  className={`nav-tab${view === t.value ? " active" : ""}`}
-                  style={{
-                    padding: "7px 16px", borderRadius: 7, fontSize: 14, fontWeight: 500, border: "none", cursor: "pointer",
-                    backgroundColor: view === t.value ? COLORS.white : "transparent",
-                    color: view === t.value ? COLORS.primary : "rgba(255,255,255,0.85)",
-                  }}
-                >
-                  {t.label}{t.value === "followup" && activeCaseCount > 0 ? ` (${activeCaseCount})` : ""}
-                </button>
-              ))}
-            </div>
           )}
         </div>
       </div>

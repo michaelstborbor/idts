@@ -9,14 +9,14 @@ import { ErrorText, Label, Pill, PrimaryButton, SecondaryButton, SelectInput, Te
 const AEFI_WRITE_ROLES = ["system_admin", "facility_focal_person", "vaccinator", "chw", "facility_supervisor", "district_manager"];
 
 const SEVERITY_STYLE = {
-  mild: { color: "#2F6B4F", bg: "#DDEEE4" },
-  moderate: { color: "#8A6A1F", bg: "#FBF1DC" },
-  severe: { color: "#8C2E1C", bg: "#F6D9D2" },
+  mild: { color: "#10633B", bg: "#DDF3E6" },
+  moderate: { color: "#7A4D00", bg: "#FFF1CC" },
+  severe: { color: "#A1131B", bg: "#FDE1E2" },
 };
 const STATUS_STYLE = {
-  done: { label: "done", color: "#2F6B4F", bg: "#DDEEE4" },
-  pending: { label: "due", color: "#8A6A1F", bg: "#FBF1DC" },
-  overdue: { label: "overdue", color: "#8C2E1C", bg: "#F6D9D2" },
+  done: { label: "done", color: "#10633B", bg: "#DDF3E6" },
+  pending: { label: "due", color: "#7A4D00", bg: "#FFF1CC" },
+  overdue: { label: "overdue", color: "#A1131B", bg: "#FDE1E2" },
 };
 const ACTION_GROUPS = [
   { key: "care", title: "Care at the facility" },
@@ -36,7 +36,7 @@ function StatusPills({ record }) {
   const i = STATUS_STYLE[record.investigation_status];
   return (
     <>
-      <Pill label="Serious" color="#8C2E1C" bg="#F6D9D2" />
+      <Pill label="Serious" color="#A1131B" bg="#FDE1E2" />
       {r && <Pill label={`Report ${r.label}`} color={r.color} bg={r.bg} />}
       {i && <Pill label={`Investigation ${i.label}`} color={i.color} bg={i.bg} />}
     </>
@@ -47,12 +47,12 @@ function vaccinationLabel(v) {
   return `${v.antigen} dose ${v.dose_number}`;
 }
 
-const checkboxRow = { display: "flex", alignItems: "flex-start", gap: 10, fontSize: 14, color: COLORS.ink, lineHeight: 1.4, cursor: "pointer" };
+const checkboxRow = { display: "flex", alignItems: "flex-start", gap: 10, fontSize: 16, color: COLORS.ink, lineHeight: 1.4, cursor: "pointer" };
 const textArea = {
   width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid ${COLORS.inputBorder}`,
-  fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit", resize: "vertical",
+  fontSize: 16, outline: "none", boxSizing: "border-box", fontFamily: "inherit", resize: "vertical",
 };
-const sectionTitle = { fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6B6660", margin: "0 0 12px" };
+const sectionTitle = { fontSize: 18, fontWeight: 700, color: "#10222E", margin: "0 0 12px" };
 const card = { borderRadius: 12, border: `1px solid ${COLORS.border}`, padding: 20, backgroundColor: COLORS.white };
 
 // ---------------------------------------------------------------------------
@@ -71,13 +71,13 @@ function ChildPicker({ children, selected, onSelect }) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 14px", borderRadius: 8, backgroundColor: COLORS.subtleBg, border: `1px solid ${COLORS.border}` }}>
         <div>
-          <p style={{ fontSize: 15, fontWeight: 500, color: COLORS.ink, margin: 0 }}>{selected.full_name}</p>
-          <p style={{ fontSize: 13, color: COLORS.muted, margin: "2px 0 0" }}>
+          <p style={{ fontSize: 16, fontWeight: 600, color: COLORS.ink, margin: 0 }}>{selected.full_name}</p>
+          <p style={{ fontSize: 15, color: COLORS.muted, margin: "2px 0 0" }}>
             {[selected.system_id, selected.dob ? ageLabel(selected.dob) : null, selected.sex ? (selected.sex === "F" ? "Female" : "Male") : null].filter(Boolean).join(" · ")}
           </p>
         </div>
         {onSelect && (
-          <button type="button" onClick={() => onSelect(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, color: COLORS.primary }}>
+          <button type="button" onClick={() => onSelect(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15, color: COLORS.primary }}>
             Change
           </button>
         )}
@@ -99,7 +99,7 @@ function ChildPicker({ children, selected, onSelect }) {
       {q.length >= 2 && (
         <div style={{ marginTop: 8, borderRadius: 8, border: `1px solid ${COLORS.border}`, overflow: "hidden" }}>
           {matches.length === 0 ? (
-            <p style={{ fontSize: 14, color: COLORS.muted, margin: 0, padding: "12px 14px" }}>
+            <p style={{ fontSize: 16, color: COLORS.muted, margin: 0, padding: "12px 14px" }}>
               No registered child matches that. You can only record an AEFI for a child you have access to.
             </p>
           ) : (
@@ -113,8 +113,8 @@ function ChildPicker({ children, selected, onSelect }) {
                   borderTop: i === 0 ? "none" : `1px solid ${COLORS.border}`,
                 }}
               >
-                <span style={{ fontSize: 14, fontWeight: 500, color: COLORS.ink }}>{c.full_name}</span>
-                <span style={{ fontSize: 13, color: COLORS.muted }}> · {c.system_id} · {ageLabel(c.dob)}</span>
+                <span style={{ fontSize: 16, fontWeight: 600, color: COLORS.ink }}>{c.full_name}</span>
+                <span style={{ fontSize: 15, color: COLORS.muted }}> · {c.system_id} · {ageLabel(c.dob)}</span>
               </button>
             ))
           )}
@@ -223,11 +223,11 @@ function AefiForm({ token, catalog, children, record, onSaved, onCancel }) {
 
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
-      <button type="button" onClick={onCancel} style={{ alignSelf: "flex-start", display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", fontSize: 14, color: COLORS.primary, padding: 0 }}>
+      <button type="button" onClick={onCancel} style={{ alignSelf: "flex-start", display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", fontSize: 16, color: COLORS.primary, padding: 0 }}>
         <ChevronLeft size={16} /> Back to AEFI list
       </button>
 
-      <p style={{ fontSize: 13, color: COLORS.muted, margin: 0, lineHeight: 1.5 }}>{catalog.disclaimer}</p>
+      <p style={{ fontSize: 15, color: COLORS.muted, margin: 0, lineHeight: 1.5 }}>{catalog.disclaimer}</p>
 
       {/* 1. Child + vaccine */}
       <div style={card}>
@@ -243,7 +243,7 @@ function AefiForm({ token, catalog, children, record, onSaved, onCancel }) {
           <div style={{ marginTop: 16 }}>
             <Label>Vaccine dose(s) the event followed</Label>
             {vaccinations.length === 0 ? (
-              <p style={{ fontSize: 14, color: COLORS.muted, margin: 0 }}>
+              <p style={{ fontSize: 16, color: COLORS.muted, margin: 0 }}>
                 This child has no recorded vaccinations yet. Record the dose first, then come back to record the AEFI.
               </p>
             ) : (
@@ -283,7 +283,7 @@ function AefiForm({ token, catalog, children, record, onSaved, onCancel }) {
               {catalog.event_types.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
             </SelectInput>
             {eventMeta && (
-              <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 13, color: COLORS.muted, lineHeight: 1.5 }}>
+              <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 15, color: COLORS.muted, lineHeight: 1.5 }}>
                 {eventMeta.guidance.map((g) => <li key={g}>{g}</li>)}
               </ul>
             )}
@@ -295,7 +295,7 @@ function AefiForm({ token, catalog, children, record, onSaved, onCancel }) {
             </div>
           )}
           {eventType && eventType !== "other" && !eventDescription && (
-            <button type="button" onClick={() => setEventDescription(" ")} style={{ alignSelf: "flex-start", background: "none", border: "none", cursor: "pointer", fontSize: 13, color: COLORS.primary, padding: 0 }}>
+            <button type="button" onClick={() => setEventDescription(" ")} style={{ alignSelf: "flex-start", background: "none", border: "none", cursor: "pointer", fontSize: 15, color: COLORS.primary, padding: 0 }}>
               + Add a description
             </button>
           )}
@@ -315,7 +315,7 @@ function AefiForm({ token, catalog, children, record, onSaved, onCancel }) {
                 return (
                   <label key={s.key} style={{ ...checkboxRow, padding: "10px 12px", borderRadius: 8, border: `1px solid ${on ? style.color : COLORS.border}`, backgroundColor: on ? style.bg : COLORS.white }}>
                     <input type="radio" name="severity" checked={on} onChange={() => setSeverity(s.key)} style={{ marginTop: 2 }} />
-                    <span><strong style={{ color: style.color }}>{s.label}</strong><br /><span style={{ fontSize: 13, color: COLORS.muted }}>{s.description}</span></span>
+                    <span><strong style={{ color: style.color }}>{s.label}</strong><br /><span style={{ fontSize: 15, color: COLORS.muted }}>{s.description}</span></span>
                   </label>
                 );
               })}
@@ -337,7 +337,7 @@ function AefiForm({ token, catalog, children, record, onSaved, onCancel }) {
               </label>
             </div>
             {isSerious && (
-              <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, backgroundColor: "#F6D9D2", color: "#8C2E1C", fontSize: 14, lineHeight: 1.5, display: "flex", gap: 8 }}>
+              <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, backgroundColor: "#FDE1E2", color: "#A1131B", fontSize: 16, lineHeight: 1.5, display: "flex", gap: 8 }}>
                 <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
                 <span>
                   <strong>Serious AEFI.</strong> Report to the district within {catalog.report_within_hours} hours and start the investigation within {catalog.investigate_within_hours} hours.
@@ -345,7 +345,7 @@ function AefiForm({ token, catalog, children, record, onSaved, onCancel }) {
               </div>
             )}
             {!isSerious && severity === "severe" && (
-              <p style={{ fontSize: 13, color: "#8A6A1F", margin: "10px 0 0" }}>
+              <p style={{ fontSize: 15, color: "#7A4D00", margin: "10px 0 0" }}>
                 Severe describes intensity, not outcome. Check the criteria above — if the child needed hospital care or was in danger, tick it.
               </p>
             )}
@@ -357,7 +357,7 @@ function AefiForm({ token, catalog, children, record, onSaved, onCancel }) {
               <SelectInput value={cause} onChange={(e) => setCause(e.target.value)}>
                 {catalog.cause_categories.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
               </SelectInput>
-              <p style={{ fontSize: 12, color: COLORS.muted, margin: "6px 0 0" }}>
+              <p style={{ fontSize: 14, color: COLORS.muted, margin: "6px 0 0" }}>
                 {catalog.cause_categories.find((c) => c.key === cause)?.description}
               </p>
             </div>
@@ -375,17 +375,17 @@ function AefiForm({ token, catalog, children, record, onSaved, onCancel }) {
       <div style={card}>
         <p style={sectionTitle}>4. Management</p>
         {!suggestion ? (
-          <p style={{ fontSize: 14, color: COLORS.muted, margin: 0 }}>
+          <p style={{ fontSize: 16, color: COLORS.muted, margin: 0 }}>
             Choose the type of event and how intense it was, and suggested management will be ticked for you. You can change any tick.
           </p>
         ) : (
           <>
             {suggestion.guidance.length > 0 && (
-              <div style={{ marginBottom: 14, padding: "10px 14px", borderRadius: 8, backgroundColor: "#FBF1DC", color: "#6B5217", fontSize: 13, lineHeight: 1.5 }}>
+              <div style={{ marginBottom: 14, padding: "10px 14px", borderRadius: 8, backgroundColor: "#FFF1CC", color: "#6A4300", fontSize: 15, lineHeight: 1.5 }}>
                 <ul style={{ margin: 0, paddingLeft: 18 }}>{suggestion.guidance.map((g) => <li key={g}>{g}</li>)}</ul>
               </div>
             )}
-            <p style={{ fontSize: 13, color: COLORS.muted, margin: "0 0 12px" }}>
+            <p style={{ fontSize: 15, color: COLORS.muted, margin: "0 0 12px" }}>
               Ticked actions are suggested for this event — untick what doesn't apply and add anything else you did.
               {" "}Report timeline: <strong>{suggestion.report_timeline === "24h" ? `within ${catalog.report_within_hours} hours` : "routine (non-serious) report"}</strong>.
             </p>
@@ -394,14 +394,14 @@ function AefiForm({ token, catalog, children, record, onSaved, onCancel }) {
 
         {suggestion && ACTION_GROUPS.map((g) => (
           <div key={g.key} style={{ marginBottom: 14 }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.ink, margin: "0 0 8px" }}>{g.title}</p>
+            <p style={{ fontSize: 15, fontWeight: 600, color: COLORS.ink, margin: "0 0 8px" }}>{g.title}</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {catalog.management_actions.filter((a) => a.group === g.key).map((a) => (
                 <label key={a.key} style={checkboxRow}>
                   <input type="checkbox" checked={actions.includes(a.key)} onChange={() => toggle(actions, setActions, a.key)} style={{ marginTop: 2 }} />
                   <span>
                     {a.label}
-                    {suggestion.actions.includes(a.key) && <span style={{ marginLeft: 8 }}><Pill label="Suggested" color={COLORS.primary} bg="#DCEBE8" /></span>}
+                    {suggestion.actions.includes(a.key) && <span style={{ marginLeft: 8 }}><Pill label="Suggested" color={COLORS.primary} bg="#DCEBF5" /></span>}
                   </span>
                 </label>
               ))}
@@ -444,18 +444,18 @@ function AefiDetail({ catalog, record, onBack }) {
   const label = (list, key) => list.find((x) => x.key === key)?.label || key;
   const row = (name, value) => (
     <div style={{ padding: "10px 0", borderTop: `1px solid ${COLORS.border}` }}>
-      <p style={{ fontSize: 12, color: COLORS.muted, margin: 0 }}>{name}</p>
-      <p style={{ fontSize: 14, color: COLORS.ink, margin: "2px 0 0", whiteSpace: "pre-wrap" }}>{value || "—"}</p>
+      <p style={{ fontSize: 14, color: COLORS.muted, margin: 0 }}>{name}</p>
+      <p style={{ fontSize: 16, color: COLORS.ink, margin: "2px 0 0", whiteSpace: "pre-wrap" }}>{value || "—"}</p>
     </div>
   );
   return (
     <div style={{ maxWidth: 760, margin: "0 auto" }}>
-      <button type="button" onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", fontSize: 14, color: COLORS.primary, padding: 0, marginBottom: 16 }}>
+      <button type="button" onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", fontSize: 16, color: COLORS.primary, padding: 0, marginBottom: 16 }}>
         <ChevronLeft size={16} /> Back to AEFI list
       </button>
       <div style={card}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 6 }}>
-          <h3 style={{ margin: 0, fontSize: 17, color: COLORS.ink }}>{record.aefi_number}</h3>
+          <h3 style={{ margin: 0, fontSize: 19, color: COLORS.ink }}>{record.aefi_number}</h3>
           <SeverityPill severity={record.severity} />
           <StatusPills record={record} />
         </div>
@@ -548,7 +548,7 @@ export default function AefiPage({ token, currentUser, children }) {
           <button
             onClick={() => setView({ mode: "form", record: null })}
             className="icon-btn"
-            style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 8, fontSize: 14, fontWeight: 500, color: "#fff", backgroundColor: COLORS.primary, border: "none", cursor: "pointer" }}
+            style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 8, fontSize: 16, fontWeight: 600, color: "#fff", backgroundColor: COLORS.primary, border: "none", cursor: "pointer" }}
           >
             <Plus size={16} /> Record AEFI
           </button>
@@ -561,8 +561,8 @@ export default function AefiPage({ token, currentUser, children }) {
         <p style={{ textAlign: "center", color: COLORS.muted }}>Loading…</p>
       ) : records.length === 0 ? (
         <div style={{ textAlign: "center", padding: "56px 16px", borderRadius: 12, border: `1px solid ${COLORS.border}`, backgroundColor: COLORS.white }}>
-          <p style={{ margin: 0, fontWeight: 500, color: COLORS.ink }}>No adverse events recorded</p>
-          <p style={{ fontSize: 14, color: COLORS.muted, margin: "4px 0 0" }}>
+          <p style={{ margin: 0, fontWeight: 600, color: COLORS.ink }}>No adverse events recorded</p>
+          <p style={{ fontSize: 16, color: COLORS.muted, margin: "4px 0 0" }}>
             {canWrite ? "Use Record AEFI to log an event for a registered child." : "Events recorded in your area will appear here."}
           </p>
         </div>
@@ -575,13 +575,13 @@ export default function AefiPage({ token, currentUser, children }) {
               style={{ width: "100%", textAlign: "left", padding: "14px 16px", background: "none", border: "none", cursor: "pointer", borderTop: i === 0 ? "none" : `1px solid ${COLORS.border}` }}
             >
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-                <span style={{ fontSize: 15, fontWeight: 500, color: COLORS.ink }}>{r.child_name}</span>
-                <span style={{ fontSize: 13, color: COLORS.muted }}>{r.child_system_id}</span>
+                <span style={{ fontSize: 16, fontWeight: 600, color: COLORS.ink }}>{r.child_name}</span>
+                <span style={{ fontSize: 15, color: COLORS.muted }}>{r.child_system_id}</span>
                 <SeverityPill severity={r.severity} />
                 <StatusPills record={r} />
               </div>
-              <p style={{ fontSize: 14, color: COLORS.ink, margin: "4px 0 0" }}>{r.event_type_label}</p>
-              <p style={{ fontSize: 13, color: COLORS.muted, margin: "2px 0 0" }}>
+              <p style={{ fontSize: 16, color: COLORS.ink, margin: "4px 0 0" }}>{r.event_type_label}</p>
+              <p style={{ fontSize: 15, color: COLORS.muted, margin: "2px 0 0" }}>
                 {r.aefi_number} · onset {fmtDate(r.onset_date)} · {r.vaccinations.map(vaccinationLabel).join(", ")}
                 {r.facility_name ? ` · ${r.facility_name}` : ""}
               </p>

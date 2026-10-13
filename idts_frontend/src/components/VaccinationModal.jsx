@@ -59,7 +59,7 @@ export default function VaccinationModal({ token, child, dose, facilities, onSav
         </div>
 
         {isEarlyCatchUp && (
-          <div style={{ display: "flex", gap: 8, padding: "10px 14px", borderRadius: 8, backgroundColor: "#FBF1DC", color: "#8A6A1F", fontSize: 14 }}>
+          <div style={{ display: "flex", gap: 8, padding: "10px 14px", borderRadius: 8, backgroundColor: "#FFF1CC", color: "#7A4D00", fontSize: 16 }}>
             <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
             <span>This is earlier than the recommended minimum age/interval for this dose. You can still
               record it — just double-check the date, or confirm this is an intentional catch-up decision.</span>
@@ -82,7 +82,7 @@ export default function VaccinationModal({ token, child, dose, facilities, onSav
                 key={s.value}
                 onClick={() => setSessionType(s.value)}
                 style={{
-                  padding: "8px 0", borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: "pointer",
+                  padding: "8px 0", borderRadius: 8, fontSize: 16, fontWeight: 600, cursor: "pointer",
                   border: `1px solid ${sessionType === s.value ? COLORS.primary : COLORS.inputBorder}`,
                   backgroundColor: sessionType === s.value ? COLORS.primary : COLORS.white,
                   color: sessionType === s.value ? COLORS.white : COLORS.ink,
@@ -105,7 +105,7 @@ export default function VaccinationModal({ token, child, dose, facilities, onSav
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
-            style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid ${COLORS.inputBorder}`, fontSize: 15, outline: "none", resize: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+            style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid ${COLORS.inputBorder}`, fontSize: 16, outline: "none", resize: "none", boxSizing: "border-box", fontFamily: "inherit" }}
           />
         </div>
 
