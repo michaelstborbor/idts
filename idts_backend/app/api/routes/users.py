@@ -3,7 +3,7 @@ import secrets
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, require_role
@@ -15,6 +15,8 @@ from app.models.child import VaccinationEvent
 from app.models.defaulter import AuditLog, DefaulterCase, TracingAttempt
 from app.models.user import ROLES, User
 from app.schemas.child import UserOut
+from app.services import audit
+from app.services.settings_service import password_min_length
 from app.schemas.user import (
     CHWCreate,
     PasswordChangeRequest,
@@ -25,6 +27,19 @@ from app.schemas.user import (
 )
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
+
+
+def _check_password_length(db: Session, password: str) -> None:
+    minimum = password_min_length(db)
+    if len(password) < minimum:
+        raise HTTPException(status_code=400, detail=f"Password must be at least {minimum} characters.")
+
+
+def _user_snapshot(u: User) -> dict:
+    return {
+        "full_name": u.full_name, "role": u.role, "facility_id": u.facility_id,
+        "geographic_area_id": u.geographic_area_id, "is_active": u.is_active,
+    }
 
 
 @router.get("", response_model=list[UserOut])
@@ -60,6 +75,7 @@ def get_me(current_user: User = Depends(get_current_user)):
 @router.patch("/me", response_model=UserOut)
 def update_my_profile(
     payload: ProfileUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -67,8 +83,11 @@ def update_my_profile(
     Username, role, and facility assignment are access-control decisions
     and stay admin-only (see update_user below)."""
     update_data = payload.model_dump(exclude_unset=True)
+    before = {"full_name": current_user.full_name}
     for field, value in update_data.items():
         setattr(current_user, field, value.strip() if isinstance(value, str) else value)
+    audit.record(db, current_user, "update", "user", current_user.id, "Updated own profile",
+                 before=before, after={"full_name": current_user.full_name}, request=request)
     db.commit()
     db.refresh(current_user)
     return current_user
@@ -77,6 +96,7 @@ def update_my_profile(
 @router.post("/me/change-password", status_code=status.HTTP_204_NO_CONTENT)
 def change_my_password(
     payload: PasswordChangeRequest,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -84,7 +104,9 @@ def change_my_password(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Current password is incorrect.")
     if payload.new_password == payload.current_password:
         raise HTTPException(status_code=400, detail="New password must be different from the current password.")
+    _check_password_length(db, payload.new_password)
     current_user.hashed_password = hash_password(payload.new_password)
+    audit.record(db, current_user, "password_change", "user", current_user.id, "Changed own password", request=request)
     db.commit()
     return None
 
@@ -109,6 +131,7 @@ def _generate_username(db: Session, full_name: str) -> str:
 @router.post("/chw", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def create_chw(
     payload: CHWCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_role("system_admin", "facility_focal_person", "facility_supervisor")
@@ -141,6 +164,8 @@ def create_chw(
         is_active=True,
     )
     db.add(chw)
+    audit.record(db, current_user, "create", "user", chw.id, f"Added CHW {chw.full_name}",
+                 after=_user_snapshot(chw), request=request)
     db.commit()
     db.refresh(chw)
     return chw
@@ -149,6 +174,7 @@ def create_chw(
 @router.post("", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def create_user(
     payload: UserCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("system_admin")),
 ):
@@ -164,6 +190,7 @@ def create_user(
         raise HTTPException(status_code=400, detail=f"role must be one of {ROLES}")
     if db.query(User).filter(User.username == payload.username).first():
         raise HTTPException(status_code=409, detail="That username is already taken.")
+    _check_password_length(db, payload.password)
 
     user = User(
         id=uuid.uuid4(),
@@ -176,6 +203,9 @@ def create_user(
         is_active=True,
     )
     db.add(user)
+    audit.record(db, current_user, "create", "user", user.id,
+                 f"Created {user.role.replace('_', ' ')} account {user.username}",
+                 after=_user_snapshot(user), request=request)
     db.commit()
     db.refresh(user)
     return user
@@ -185,6 +215,7 @@ def create_user(
 def update_user(
     user_id: uuid.UUID,
     payload: UserAdminUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("system_admin")),
 ):
@@ -204,8 +235,18 @@ def update_user(
     if user.id == current_user.id and "role" in update_data and update_data["role"] != current_user.role:
         raise HTTPException(status_code=400, detail="You cannot change your own role.")
 
+    before = _user_snapshot(user)
     for field, value in update_data.items():
         setattr(user, field, value.strip() if isinstance(value, str) else value)
+    after = _user_snapshot(user)
+    changed = [k for k in after if after[k] != before[k]]
+    if changed:
+        if changed == ["is_active"]:
+            action, summary = ("activate", f"Reactivated {user.username}") if user.is_active else ("deactivate", f"Deactivated {user.username}")
+        else:
+            action, summary = "update", f"Updated {user.username}: " + ", ".join(k.replace("_", " ") for k in changed)
+        audit.record(db, current_user, action, "user", user.id, summary,
+                     before={k: before[k] for k in changed}, after={k: after[k] for k in changed}, request=request)
     db.commit()
     db.refresh(user)
     return user
@@ -215,6 +256,7 @@ def update_user(
 def reset_user_password(
     user_id: uuid.UUID,
     payload: PasswordResetRequest,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("system_admin")),
 ):
@@ -236,14 +278,39 @@ def reset_user_password(
     if user.id == current_user.id:
         raise HTTPException(status_code=400, detail="Use Account settings to change your own password.")
 
+    _check_password_length(db, payload.new_password)
     user.hashed_password = hash_password(payload.new_password)
+    # A reset is how an admin gets a locked-out user back in, so clear the lock too.
+    user.failed_login_count = 0
+    user.locked_until = None
+    audit.record(db, current_user, "password_reset", "user", user.id, f"Reset password for {user.username}", request=request)
     db.commit()
     return None
+
+
+@router.post("/{user_id}/unlock", response_model=UserOut)
+def unlock_user(
+    user_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("system_admin")),
+):
+    """Admin-only: clear a sign-in lockout before it expires on its own."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.failed_login_count = 0
+    user.locked_until = None
+    audit.record(db, current_user, "unlock", "user", user.id, f"Unlocked {user.username}", request=request)
+    db.commit()
+    db.refresh(user)
+    return user
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
     user_id: uuid.UUID,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("system_admin")),
 ):
@@ -283,6 +350,8 @@ def delete_user(
             ),
         )
 
+    audit.record(db, current_user, "delete", "user", user.id, f"Removed account {user.username}",
+                 before=_user_snapshot(user), request=request)
     db.delete(user)
     db.commit()
     return None

@@ -90,6 +90,31 @@ async function request(path, { method = "GET", body, token, params, form } = {})
   return data;
 }
 
+// Downloads a file from an authenticated endpoint (a plain <a href> can't
+// send the Authorization header).
+async function download(path, { token, params, filename }) {
+  let url = `${API_BASE_URL}${path}`;
+  const qs = new URLSearchParams(
+    Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== null && v !== "")
+  ).toString();
+  if (qs) url += `?${qs}`;
+  let response;
+  try {
+    response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  } catch {
+    throw new ApiError("Couldn't reach the server. Check your connection.", 0, null);
+  }
+  if (!response.ok) throw new ApiError(`Download failed (${response.status}).`, response.status, null);
+  const blob = await response.blob();
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+}
+
 export const api = {
   login: (username, password) =>
     request("/api/v1/auth/login", { method: "POST", form: { username, password } }),
@@ -201,6 +226,22 @@ export const api = {
     request("/api/v1/reports/vaccinations-summary", {
       token, params: { start_date: startDate, end_date: endDate, facility_id: facilityId },
     }),
+  // Administration
+  unlockUser: (token, userId) => request(`/api/v1/users/${userId}/unlock`, { method: "POST", token }),
+  getSecuritySettings: (token) => request("/api/v1/admin/settings/security", { token }),
+  updateSecuritySettings: (token, body) => request("/api/v1/admin/settings/security", { method: "PUT", token, body }),
+  getSystemSettings: (token) => request("/api/v1/admin/settings/system", { token }),
+  updateSystemSettings: (token, body) => request("/api/v1/admin/settings/system", { method: "PUT", token, body }),
+  getScheduleThresholds: (token) => request("/api/v1/admin/schedule-thresholds", { token }),
+  updateScheduleThresholds: (token, rows) => request("/api/v1/admin/schedule-thresholds", { method: "PUT", token, body: rows }),
+  getPublicSettings: () => request("/api/v1/settings/public"),
+  getSystemInfo: (token) => request("/api/v1/admin/system-info", { token }),
+  listAuditLogs: (token, params) => request("/api/v1/admin/audit-logs", { token, params }),
+  exportAuditLogs: (token, params) =>
+    download("/api/v1/admin/audit-logs/export", {
+      token, params, filename: `idts-activity-log-${new Date().toISOString().slice(0, 10)}.csv`,
+    }),
 };
 
 export { ApiError, API_BASE_URL };
+

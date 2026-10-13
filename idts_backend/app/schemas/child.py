@@ -19,6 +19,8 @@ class UserOut(BaseModel):
     facility_id: Optional[uuid.UUID] = None
     geographic_area_id: Optional[uuid.UUID] = None
     is_active: bool = True
+    last_login_at: Optional[datetime] = None
+    locked_until: Optional[datetime] = None
 
 
 class ChildCreate(BaseModel):

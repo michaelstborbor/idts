@@ -178,6 +178,8 @@ def _audit(db: Session, user: User, action: str, aefi: AefiEvent, before=None) -
     db.add(AuditLog(
         id=uuid.uuid4(), user_id=user.id, action=action, entity="aefi_event", entity_id=str(aefi.id),
         before=jsonable_encoder(before) if before else None, after=jsonable_encoder(after), timestamp=utcnow(),
+        actor_username=user.username, actor_name=user.full_name,
+        summary=f"{'Reported' if action == 'aefi.create' else 'Updated'} AEFI {aefi.aefi_number} ({aefi.severity}{', serious' if aefi.is_serious else ''})",
     ))
 
 

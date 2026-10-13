@@ -12,7 +12,9 @@ we have more than a handful of fixed roles.
 import uuid
 from typing import Optional
 
-from sqlalchemy import Boolean, ForeignKey, String
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -70,5 +72,12 @@ class User(Base, TimestampMixin):
     # GeographicArea) whose facilities this user can see. Left empty for
     # facility-level, national and admin accounts.
     geographic_area_id: Mapped[Optional[uuid.UUID]] = mapped_column(GUID(), ForeignKey("geographic_areas.id"), nullable=True)
+
+    # Sign-in tracking for the security settings (lockout after repeated
+    # failed attempts) and for the user-management "last sign-in" column.
+    # All nullable so schema_sync can add them to an existing database.
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    failed_login_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=0)
+    locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     facility: Mapped[Optional[Facility]] = relationship()

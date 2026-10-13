@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { FileText, LogOut, Menu as MenuIcon, Settings, Syringe, UserPlus } from "lucide-react";
+import { Menu as MenuIcon, UserPlus, Wifi, WifiOff } from "lucide-react";
 import { api, getStoredToken, setStoredToken } from "./api/client.js";
 import { COLORS, CONTENT_MAX_WIDTH, FONT_STACK } from "./constants.js";
 import LoginPage from "./pages/LoginPage.jsx";
@@ -13,27 +13,34 @@ import AdminPage from "./pages/AdminPage.jsx";
 import AccountSettingsPage from "./pages/AccountSettingsPage.jsx";
 import ReportsPage from "./pages/ReportsPage.jsx";
 import AefiPage from "./pages/AefiPage.jsx";
+import ActivityLogPage from "./pages/ActivityLogPage.jsx";
+import SecuritySettingsPage from "./pages/SecuritySettingsPage.jsx";
+import SystemSettingsPage from "./pages/SystemSettingsPage.jsx";
 import AssignCaseModal from "./components/AssignCaseModal.jsx";
 import CaseDetailModal from "./components/CaseDetailModal.jsx";
+import Sidebar, { navSections } from "./components/Sidebar.jsx";
 
-const menuItemStyle = {
-  width: "100%", textAlign: "left", padding: "0 16px", minHeight: 48, fontSize: 16, color: COLORS.ink,
-  backgroundColor: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 12,
-};
-
-const BASE_NAV_TABS = [
-  { value: "dashboard", label: "Dashboard" },
-  { value: "list", label: "All children" },
-  { value: "due", label: "Due & defaulters" },
-  { value: "followup", label: "Follow-up" },
-  { value: "aefi", label: "AEFI" },
-  { value: "reports", label: "Reports" },
-];
-
-// Views where the tab bar shows at all
-const TAB_BAR_VIEWS = ["dashboard", "list", "due", "followup", "aefi", "reports", "admin"];
 // Views where the "Register child" quick-action makes sense
 const REGISTER_BUTTON_VIEWS = ["dashboard", "list", "due", "followup"];
+const ADMIN_VIEWS = ["admin", "activity", "security", "system"];
+const COLLAPSED_KEY = "idts:sidebar-collapsed";
+const DEFAULT_PROGRAMME = "Expanded Programme on Immunization";
+
+function readCollapsed() {
+  try { return localStorage.getItem(COLLAPSED_KEY) === "1"; } catch { return false; }
+}
+
+function useOnlineStatus() {
+  const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
+  useEffect(() => {
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener("online", up);
+    window.addEventListener("offline", down);
+    return () => { window.removeEventListener("online", up); window.removeEventListener("offline", down); };
+  }, []);
+  return online;
+}
 
 export default function App() {
   const [token, setToken] = useState(getStoredToken());
@@ -54,8 +61,29 @@ export default function App() {
   const [editingChild, setEditingChild] = useState(null);
   const [assignTarget, setAssignTarget] = useState(null);
   const [caseModalTarget, setCaseModalTarget] = useState(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [viewBeforeAccount, setViewBeforeAccount] = useState("dashboard");
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [programmeName, setProgrammeName] = useState(DEFAULT_PROGRAMME);
+  const online = useOnlineStatus();
+
+  useEffect(() => {
+    api.getPublicSettings().then((s) => s?.programme_name && setProgrammeName(s.programme_name)).catch(() => {});
+  }, []);
+
+  function toggleCollapsed() {
+    setCollapsed((c) => {
+      try { localStorage.setItem(COLLAPSED_KEY, c ? "0" : "1"); } catch { /* per-device preference only */ }
+      return !c;
+    });
+  }
+
+  function navigate(next) {
+    if (next === "account" && view !== "account") setViewBeforeAccount(view);
+    setView(next);
+    setDrawerOpen(false);
+    window.scrollTo(0, 0);
+  }
 
   // On load, if a token is already stored, verify it's still valid.
   useEffect(() => {
@@ -138,11 +166,7 @@ export default function App() {
   // Vaccinator and CHW get no Reports access at all (also enforced on the
   // backend — see app/core/scope.py REPORT_ROLES) — not hidden, removed.
   const canSeeReports = currentUser.role !== "vaccinator" && currentUser.role !== "chw";
-  const navTabs = [
-    ...BASE_NAV_TABS.filter((t) => t.value !== "reports" || canSeeReports),
-    ...(isAdmin ? [{ value: "admin", label: "Admin" }] : []),
-  ];
-  const showTabBar = TAB_BAR_VIEWS.includes(view);
+  const sections = navSections({ canSeeReports, isAdmin });
   const showRegisterButton = REGISTER_BUTTON_VIEWS.includes(view);
 
   const viewTitle = {
@@ -153,6 +177,9 @@ export default function App() {
     aefi: "Adverse events following immunization (AEFI)",
     reports: "Reports",
     admin: "User management",
+    activity: "Activity log",
+    security: "Security settings",
+    system: "System settings",
     account: "Account settings",
     register: "Register a child",
     profile: "Child record",
@@ -160,132 +187,62 @@ export default function App() {
   }[view] || "Children & immunization status";
 
   return (
-    <div style={{ backgroundColor: COLORS.bg, minHeight: "100vh", fontFamily: FONT_STACK, color: COLORS.ink }}>
-      <header className="app-bar" style={{ backgroundColor: COLORS.primaryDark, color: COLORS.white, padding: "0 20px", position: "sticky", top: 0, zIndex: 30, boxShadow: "0 2px 10px rgba(7,63,99,0.25)" }}>
-        <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, minHeight: 64 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-              <span aria-hidden="true" style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: COLORS.white, color: COLORS.primaryDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Syringe size={22} strokeWidth={2.25} />
-              </span>
-              <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: 19, fontWeight: 700, margin: 0, lineHeight: 1.1, letterSpacing: "0.02em" }}>IDTS</p>
-                <p className="app-bar-tagline" style={{ fontSize: 14, margin: 0, color: "rgba(255,255,255,0.82)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  Immunization &amp; defaulter tracking
-                </p>
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-              <div className="app-bar-user" style={{ textAlign: "right", marginRight: 4 }}>
-                <p style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{currentUser.full_name}</p>
-                <p style={{ fontSize: 14, margin: 0, color: "rgba(255,255,255,0.82)", textTransform: "capitalize" }}>{currentUser.role.replace(/_/g, " ")}</p>
-              </div>
-              {showRegisterButton && (
-                <button
-                  onClick={() => setView("register")}
-                  className="icon-btn"
-                  style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 44, padding: "0 16px", borderRadius: 10, fontSize: 16, fontWeight: 600, color: COLORS.primaryDark, backgroundColor: COLORS.white, border: "none", cursor: "pointer" }}
-                >
-                  <UserPlus size={18} /> Register child
-                </button>
-              )}
-              <div style={{ position: "relative" }}>
-                <button
-                  onClick={() => setMenuOpen((open) => !open)}
-                  title="Menu"
-                  aria-label="Menu"
-                  aria-expanded={menuOpen}
-                  className="icon-btn"
-                  style={{ width: 44, height: 44, borderRadius: 10, color: COLORS.white, backgroundColor: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.35)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                >
-                  <MenuIcon size={20} />
-                </button>
-                {menuOpen && (
-                  <>
-                    {/* Invisible full-screen layer: clicking anywhere outside the
-                        menu closes it. Sits below the menu itself (lower z-index). */}
-                    <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />
-                    <div
-                      className="menu-dropdown"
-                      style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, minWidth: 220, backgroundColor: COLORS.white, border: `1px solid ${COLORS.border}`, borderRadius: 12, boxShadow: "0 12px 28px rgba(7,63,99,0.18)", overflow: "hidden", zIndex: 21 }}
-                    >
-                      <div style={{ padding: "12px 16px", borderBottom: `1px solid ${COLORS.border}`, backgroundColor: COLORS.subtleBg }}>
-                        <p style={{ fontSize: 15, fontWeight: 600, margin: 0, color: COLORS.ink }}>{currentUser.full_name}</p>
-                        <p style={{ fontSize: 14, margin: 0, color: COLORS.muted, textTransform: "capitalize" }}>{currentUser.role.replace(/_/g, " ")}</p>
-                      </div>
-                      {canSeeReports && (
-                        <button
-                          onClick={() => { setView("reports"); setMenuOpen(false); }}
-                          className="menu-item"
-                          style={menuItemStyle}
-                        >
-                          <FileText size={18} /> Reports
-                        </button>
-                      )}
-                      <button
-                        onClick={() => { if (view !== "account") setViewBeforeAccount(view); setView("account"); setMenuOpen(false); }}
-                        className="menu-item"
-                        style={{ ...menuItemStyle, borderTop: `1px solid ${COLORS.border}` }}
-                      >
-                        <Settings size={18} /> Settings
-                      </button>
-                      <button
-                        onClick={() => { setMenuOpen(false); handleLogout(); }}
-                        className="menu-item"
-                        style={{ ...menuItemStyle, color: COLORS.danger, borderTop: `1px solid ${COLORS.border}` }}
-                      >
-                        <LogOut size={18} /> Logout
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
+    <div className="app-shell" style={{ backgroundColor: COLORS.bg, minHeight: "100vh", fontFamily: FONT_STACK, color: COLORS.ink }}>
+      {drawerOpen && <div className="drawer-backdrop" onClick={() => setDrawerOpen(false)} aria-hidden="true" />}
+      <Sidebar
+        sections={sections}
+        view={view}
+        onNavigate={navigate}
+        badges={{ followup: activeCaseCount }}
+        collapsed={collapsed}
+        onToggleCollapsed={toggleCollapsed}
+        drawerOpen={drawerOpen}
+        onCloseDrawer={() => setDrawerOpen(false)}
+        currentUser={currentUser}
+        programmeName={programmeName}
+        onAccount={() => navigate("account")}
+        onLogout={handleLogout}
+      />
 
-          {showTabBar && (
-            <nav className="app-nav" aria-label="Main" style={{ display: "flex", gap: 4, overflowX: "auto", margin: "0 -8px" }}>
-              {navTabs.map((t) => {
-                const active = view === t.value;
-                return (
-                  <button
-                    key={t.value}
-                    onClick={() => setView(t.value)}
-                    aria-current={active ? "page" : undefined}
-                    className={`nav-tab${active ? " active" : ""}`}
-                    style={{
-                      padding: "12px 14px 10px", fontSize: 16, fontWeight: active ? 700 : 500, border: "none", cursor: "pointer",
-                      whiteSpace: "nowrap", flexShrink: 0, borderRadius: "8px 8px 0 0", backgroundColor: "transparent",
-                      color: active ? COLORS.white : "rgba(255,255,255,0.8)",
-                      borderBottom: `4px solid ${active ? "#5FD39A" : "transparent"}`,
-                    }}
-                  >
-                    {t.label}
-                    {t.value === "followup" && activeCaseCount > 0 && (
-                      <span style={{ marginLeft: 8, padding: "1px 8px", borderRadius: 999, fontSize: 14, fontWeight: 700, backgroundColor: "#FFD24D", color: COLORS.ink }}>
-                        {activeCaseCount}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
-          )}
-        </div>
+      <div className="app-main">
+      <header className="topbar">
+        <button className="topbar-menu" onClick={() => setDrawerOpen(true)} aria-label="Open menu" aria-expanded={drawerOpen}>
+          <MenuIcon size={22} />
+        </button>
+        <h1 className="page-title" style={{ fontSize: 26, fontWeight: 700, color: COLORS.ink, margin: 0, flex: 1, minWidth: 0 }}>{viewTitle}</h1>
+        <span
+          className={`net-status${online ? "" : " offline"}`}
+          role="status"
+          title={online ? "Connected" : "No connection: changes can't be saved until you're back online"}
+        >
+          {online ? <Wifi size={16} /> : <WifiOff size={16} />}
+          <span className="net-status-label">{online ? "Online" : "Offline"}</span>
+        </span>
+        {showRegisterButton && (
+          <button
+            onClick={() => navigate("register")}
+            className="icon-btn btn-primary topbar-register"
+            style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 44, padding: "0 18px", borderRadius: 10, fontSize: 16, fontWeight: 600, color: COLORS.white, backgroundColor: COLORS.primary, border: "none", cursor: "pointer", flexShrink: 0 }}
+          >
+            <UserPlus size={18} /> <span className="topbar-register-label">Register child</span>
+          </button>
+        )}
       </header>
 
-      <div style={{ padding: "0 20px" }}>
-        <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto", padding: "28px 0 20px" }}>
-          <h1 className="page-title" style={{ fontSize: 28, fontWeight: 700, color: COLORS.ink, margin: 0 }}>{viewTitle}</h1>
-          {dataError && (
-            <p role="alert" style={{ marginTop: 12, marginBottom: 0, fontSize: 16, color: COLORS.danger, backgroundColor: COLORS.dangerTint, padding: "12px 16px", borderRadius: 10 }}>
-              {dataError}
-            </p>
-          )}
+      {!online && (
+        <p role="alert" className="offline-banner">
+          You're offline. You can keep reading what's on screen, but new records won't save until the connection is back.
+        </p>
+      )}
+      {dataError && (
+        <div style={{ padding: "16px 24px 0" }}>
+          <p role="alert" style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto", fontSize: 16, color: COLORS.danger, backgroundColor: COLORS.dangerTint, padding: "12px 16px", borderRadius: 10 }}>
+            {dataError}
+          </p>
         </div>
-      </div>
+      )}
 
-      <div style={{ padding: "0 20px 60px" }}>
+      <main className="app-content">
         {view === "register" ? (
           <ChildForm
             token={token}
@@ -336,6 +293,12 @@ export default function App() {
           <ReportsPage token={token} currentUser={currentUser} />
         ) : view === "admin" && isAdmin ? (
           <AdminPage token={token} facilities={facilities} currentUserId={currentUser.id} />
+        ) : view === "activity" && isAdmin ? (
+          <ActivityLogPage token={token} />
+        ) : view === "security" && isAdmin ? (
+          <SecuritySettingsPage token={token} />
+        ) : view === "system" && isAdmin ? (
+          <SystemSettingsPage token={token} onProgrammeNameChange={setProgrammeName} />
         ) : view === "account" ? (
           <AccountSettingsPage
             token={token}
@@ -356,6 +319,7 @@ export default function App() {
             onRegisterClick={() => setView("register")}
           />
         )}
+      </main>
       </div>
 
       {assignTarget && (
