@@ -51,8 +51,17 @@ class AggregateReportOut(BaseModel):
     totals: AggregateRow
 
 
+class VaccineDoseOut(BaseModel):
+    """One dose of an antigen, for the report's dose checklist. key is what
+    /reports/generate takes in its doses filter ("<antigen>|<dose number>")."""
+    key: str
+    dose_number: int
+    label: str  # e.g. "Pentavalent 2", or just "BCG" for a single-dose antigen
+
+
 class VaccineOut(BaseModel):
     antigen: str
+    doses: list[VaccineDoseOut] = []
 
 
 class DoseByVaccine(BaseModel):

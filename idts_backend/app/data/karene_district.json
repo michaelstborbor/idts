@@ -1152,63 +1152,63 @@
     "chiefdoms": {
       "Buya": [
         {
-          "name": "Kamasondo",
+          "name": "Kamasondo CHC",
           "type": "chc"
         },
         {
-          "name": "Rosint Buya",
+          "name": "Rosint Buya CHP",
           "type": "chp"
         },
         {
-          "name": "Masamboi",
+          "name": "Masamboi MCHP",
           "type": "mchp"
         },
         {
-          "name": "Manumtheneh",
+          "name": "Manumtheneh MCHP",
           "type": "mchp"
         }
       ],
       "Dibia": [
         {
-          "name": "Gbinti",
+          "name": "Gbinti CHC",
           "type": "chc"
         },
         {
-          "name": "Roctolon",
+          "name": "Roctolon MCHP",
           "type": "mchp"
         },
         {
-          "name": "Gbombana",
+          "name": "Gbombana MCHP",
           "type": "mchp"
         },
         {
-          "name": "Rogballan",
+          "name": "Rogballan CHP",
           "type": "chp"
         },
         {
-          "name": "Magborongnoh",
+          "name": "Magborongnoh MCHP",
           "type": "mchp"
         }
       ],
       "Gbanti": [
         {
-          "name": "Gbanti",
+          "name": "Gbanti CHC",
           "type": "chc"
         },
         {
-          "name": "Gbonkobana",
+          "name": "Gbonkobana CHP",
           "type": "chp"
         },
         {
-          "name": "B/Makarankay",
+          "name": "B/Makarankay MCHP",
           "type": "mchp"
         },
         {
-          "name": "Gbainkfay",
+          "name": "Gbainkfay MCHP",
           "type": "mchp"
         },
         {
-          "name": "Kambia",
+          "name": "Kambia CHP",
           "type": "chp"
         },
         {
@@ -1218,79 +1218,79 @@
       ],
       "L/Gormbahun": [
         {
-          "name": "Batkanu",
+          "name": "Batkanu CHC",
           "type": "chc"
         },
         {
-          "name": "Matoto",
+          "name": "Matoto CHP",
           "type": "chp"
         },
         {
-          "name": "Magbaingba",
+          "name": "Magbaingba MCHP",
           "type": "mchp"
         },
         {
-          "name": "Kiamunday",
+          "name": "Kiamunday MCHP",
           "type": "mchp"
         }
       ],
       "Mafonda Makerembay": [
         {
-          "name": "Gbonkonka",
+          "name": "Gbonkonka CHC",
           "type": "chc"
         },
         {
-          "name": "Rochain Loko",
+          "name": "Rochain Loko CHP",
           "type": "chp"
         }
       ],
       "Romende": [
         {
-          "name": "Foredugu",
+          "name": "Foredugu CHC",
           "type": "chc"
         },
         {
-          "name": "Mabureh Mende",
+          "name": "Mabureh Mende MCHP",
           "type": "mchp"
         },
         {
-          "name": "Gbomsamba",
+          "name": "Gbomsamba CHP",
           "type": "chp"
         },
         {
-          "name": "Rokamba",
+          "name": "Rokamba CHP",
           "type": "chp"
         },
         {
-          "name": "Worreh Bana",
+          "name": "Worreh Bana CHP",
           "type": "chp"
         }
       ],
       "Safroko": [
         {
-          "name": "Maron",
+          "name": "Maron CHP",
           "type": "chp"
         }
       ],
       "Sanda Loko": [
         {
-          "name": "Kamalo",
+          "name": "Kamalo CHC",
           "type": "chc"
         },
         {
-          "name": "Laminaya",
+          "name": "Laminaya CHP",
           "type": "chp"
         },
         {
-          "name": "Laiya Loko",
+          "name": "Laiya Loko MCHP",
           "type": "mchp"
         },
         {
-          "name": "Madina Fullah",
+          "name": "Madina Fullah MCHP",
           "type": "mchp"
         },
         {
-          "name": "Rochain Salcos",
+          "name": "Rochain Salcos CHP",
           "type": "chp"
         },
         {
@@ -1298,47 +1298,47 @@
           "type": "unspecified"
         },
         {
-          "name": "Maharibo",
+          "name": "Maharibo CHP",
           "type": "chp"
         },
         {
-          "name": "Macorba Loko",
+          "name": "Macorba Loko MCHP",
           "type": "mchp"
         },
         {
-          "name": "Mayollah",
+          "name": "Mayollah CHP",
           "type": "chp"
         }
       ],
       "Sanda Magbolonthor": [
         {
-          "name": "Gbogbodo",
+          "name": "Gbogbodo MCHP",
           "type": "mchp"
         },
         {
-          "name": "Kantia",
+          "name": "Kantia CHP",
           "type": "chp"
         },
         {
-          "name": "Sendugu",
+          "name": "Sendugu CHC",
           "type": "chc"
         },
         {
-          "name": "Komneh",
+          "name": "Komneh CHCP",
           "type": "unspecified"
         },
         {
-          "name": "Magbolonthor",
+          "name": "Magbolonthor MCHP",
           "type": "mchp"
         }
       ],
       "Sanda Tendaren": [
         {
-          "name": "Rokulan",
+          "name": "Rokulan CHC",
           "type": "chc"
         },
         {
-          "name": "Mabunduka",
+          "name": "Mabunduka CHC",
           "type": "chc"
         },
         {
@@ -1346,53 +1346,53 @@
           "type": "unspecified"
         },
         {
-          "name": "Manack",
+          "name": "Manack MCHP",
           "type": "mchp"
         },
         {
-          "name": "Malontho",
+          "name": "Malontho MCHP",
           "type": "mchp"
         },
         {
-          "name": "Mateboi",
+          "name": "Mateboi CHC",
           "type": "chc"
         },
         {
-          "name": "Royanka Lol",
+          "name": "Royanka Lol CHP",
           "type": "chp"
         }
       ],
       "Sella Limba": [
         {
-          "name": "Kamakwie",
+          "name": "Kamakwie CHC",
           "type": "chc"
         },
         {
-          "name": "Kathantha Yimbor",
+          "name": "Kathantha Yimbor CHC",
           "type": "chc"
         },
         {
-          "name": "Kabba Ferry",
+          "name": "Kabba Ferry CHP",
           "type": "chp"
         },
         {
-          "name": "Kaponkie",
+          "name": "Kaponkie MCHP",
           "type": "mchp"
         },
         {
-          "name": "Kamabaio",
+          "name": "Kamabaio MCHP",
           "type": "mchp"
         },
         {
-          "name": "Masankorie",
+          "name": "Masankorie CHP",
           "type": "chp"
         },
         {
-          "name": "Kamawonie",
+          "name": "Kamawonie MCHP",
           "type": "mchp"
         },
         {
-          "name": "Kagboray",
+          "name": "Kagboray MCHP",
           "type": "mchp"
         },
         {
@@ -1402,25 +1402,25 @@
       ],
       "Tambaka Simibugie": [
         {
-          "name": "Samaya",
+          "name": "Samaya CHC",
           "type": "chc"
         },
         {
-          "name": "Komoya",
+          "name": "Komoya CHP",
           "type": "chp"
         }
       ],
       "Tambaka Yobangie": [
         {
-          "name": "Fintonia",
+          "name": "Fintonia CHC",
           "type": "chc"
         },
         {
-          "name": "Dumbaya",
+          "name": "Dumbaya CHP",
           "type": "chp"
         },
         {
-          "name": "Sanya",
+          "name": "Sanya CHC",
           "type": "chc"
         }
       ]
