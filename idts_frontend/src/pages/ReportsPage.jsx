@@ -87,11 +87,11 @@ function AggregateSection({ token, startDate, endDate }) {
 
   return (
     <div style={{ marginTop: 32 }}>
-      <h3 style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6B6660", marginBottom: 12 }}>
+      <h3 style={{ fontSize: 18, fontWeight: 700, color: "#10222E", marginBottom: 12 }}>
         Aggregate report
       </h3>
       <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, padding: 20, backgroundColor: COLORS.white, marginBottom: 20 }}>
-        <p style={{ fontSize: 13, color: COLORS.muted, margin: "0 0 12px" }}>
+        <p style={{ fontSize: 15, color: COLORS.muted, margin: "0 0 12px" }}>
           Showing data for: <strong style={{ color: COLORS.ink }}>{scope.scope_label}</strong>. Uses the dates above for doses and tracing activity; child counts are as of today.
         </p>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
@@ -100,7 +100,7 @@ function AggregateSection({ token, startDate, endDate }) {
               key={g}
               onClick={() => { setGroupBy(g); setReport(null); }}
               style={{
-                padding: "6px 14px", borderRadius: 999, fontSize: 14, fontWeight: 500, cursor: "pointer",
+                padding: "6px 14px", borderRadius: 999, fontSize: 16, fontWeight: 600, cursor: "pointer",
                 border: `1px solid ${groupBy === g ? COLORS.primary : COLORS.inputBorder}`,
                 backgroundColor: groupBy === g ? COLORS.primary : COLORS.white,
                 color: groupBy === g ? "#fff" : COLORS.ink,
@@ -116,7 +116,7 @@ function AggregateSection({ token, startDate, endDate }) {
           {report && (
             <button
               onClick={() => downloadCsv(aggregateToCsv(report), `idts-aggregate-${report.group_by}-${todayIso()}.csv`)}
-              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 8, fontSize: 14, fontWeight: 500, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer" }}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 8, fontSize: 16, fontWeight: 600, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer" }}
             >
               <Download size={15} /> Download CSV
             </button>
@@ -129,7 +129,7 @@ function AggregateSection({ token, startDate, endDate }) {
           <p style={{ textAlign: "center", color: COLORS.muted }}>No data for this breakdown.</p>
         ) : (
           <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, overflow: "auto", backgroundColor: COLORS.white }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 16 }}>
               <thead>
                 <tr style={{ backgroundColor: COLORS.subtleBg }}>
                   <th style={{ ...th, textAlign: "left" }}>{(GROUP_LABELS[report.group_by] || "By name").replace("By ", "")}</th>
@@ -156,7 +156,7 @@ function AggregateSection({ token, startDate, endDate }) {
                   <tr key={r.key} style={{ borderTop: i === 0 ? "none" : `1px solid ${COLORS.border}` }}>
                     <td style={{ padding: "10px 14px", color: COLORS.ink, textAlign: "left" }}>
                       {r.label}
-                      {r.sublabel && <div style={{ fontSize: 12, color: COLORS.muted }}>{r.sublabel}</div>}
+                      {r.sublabel && <div style={{ fontSize: 14, color: COLORS.muted }}>{r.sublabel}</div>}
                     </td>
                     {isUser ? (
                       <>
@@ -310,9 +310,9 @@ function OrgUnitPicker({ token, role, onChange }) {
 
   if (!needsAnyPicker) {
     return (
-      <p style={{ fontSize: 14, color: COLORS.ink, margin: 0 }}>
+      <p style={{ fontSize: 16, color: COLORS.ink, margin: 0 }}>
         <strong>Facility:</strong> {fixedFacility ? fixedFacility.name : "Loading…"}
-        <span style={{ display: "block", fontSize: 12, color: COLORS.muted, marginTop: 4 }}>
+        <span style={{ display: "block", fontSize: 14, color: COLORS.muted, marginTop: 4 }}>
           Your account is assigned to this one facility — no other data is available to filter in.
         </span>
       </p>
@@ -383,7 +383,7 @@ function dosesOf(vaccine) {
   return vaccine.doses || [];
 }
 
-const linkButton = { background: "none", border: "none", padding: 0, color: COLORS.primary, fontSize: 12, cursor: "pointer", textDecoration: "underline" };
+const linkButton = { background: "none", border: "none", padding: 0, color: COLORS.primary, fontSize: 14, cursor: "pointer", textDecoration: "underline" };
 
 function GeneratedReportSection({ token, role }) {
   const [vaccines, setVaccines] = useState([]);
@@ -443,18 +443,18 @@ function GeneratedReportSection({ token, role }) {
 
   return (
     <div style={{ marginTop: 32 }}>
-      <h3 style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6B6660", marginBottom: 12 }}>
+      <h3 style={{ fontSize: 18, fontWeight: 700, color: "#10222E", marginBottom: 12 }}>
         Generate report
       </h3>
       <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, padding: 20, backgroundColor: COLORS.white, marginBottom: 20, display: "flex", flexDirection: "column", gap: 20 }}>
         <div>
-          <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.ink, margin: "0 0 10px" }}>1. Organizational unit</p>
+          <p style={{ fontSize: 15, fontWeight: 600, color: COLORS.ink, margin: "0 0 10px" }}>1. Organizational unit</p>
           <OrgUnitPicker token={token} role={role} onChange={setOrgUnit} />
         </div>
 
         <div>
-          <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.ink, margin: "0 0 4px" }}>2. Vaccine doses</p>
-          <p style={{ fontSize: 12, color: COLORS.muted, margin: "0 0 10px" }}>
+          <p style={{ fontSize: 15, fontWeight: 600, color: COLORS.ink, margin: "0 0 4px" }}>2. Vaccine doses</p>
+          <p style={{ fontSize: 14, color: COLORS.muted, margin: "0 0 10px" }}>
             Pick individual doses, or tap a vaccine's name to select or clear all of its doses.{" "}
             <button type="button" onClick={() => setSelectedDoses(allDoseKeys)} style={linkButton}>Select all</button>
             {" · "}
@@ -471,7 +471,7 @@ function GeneratedReportSection({ token, role }) {
                       type="button"
                       onClick={() => toggleAntigen(v)}
                       title={`Select or clear every ${v.antigen} dose`}
-                      style={{ minWidth: 150, textAlign: "left", fontSize: 13, fontWeight: 600, color: COLORS.ink, background: "none", border: "none", padding: "6px 0", cursor: "pointer" }}
+                      style={{ minWidth: 150, textAlign: "left", fontSize: 15, fontWeight: 600, color: COLORS.ink, background: "none", border: "none", padding: "6px 0", cursor: "pointer" }}
                     >
                       {v.antigen} <span style={{ color: COLORS.muted, fontWeight: 400 }}>({selectedCount}/{doses.length})</span>
                     </button>
@@ -484,7 +484,7 @@ function GeneratedReportSection({ token, role }) {
                       <label
                         key={d.key}
                         style={{
-                          display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 13, cursor: "pointer",
+                          display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 15, cursor: "pointer",
                           border: `1px solid ${checked ? COLORS.primary : COLORS.inputBorder}`,
                           backgroundColor: checked ? COLORS.primary : COLORS.white,
                           color: checked ? "#fff" : COLORS.ink,
@@ -502,7 +502,7 @@ function GeneratedReportSection({ token, role }) {
         </div>
 
         <div>
-          <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.ink, margin: "0 0 10px" }}>3. Period</p>
+          <p style={{ fontSize: 15, fontWeight: 600, color: COLORS.ink, margin: "0 0 10px" }}>3. Period</p>
           <div className="responsive-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div>
               <Label>Start date <span style={{ color: COLORS.muted, fontWeight: 400 }}>(optional)</span></Label>
@@ -521,7 +521,7 @@ function GeneratedReportSection({ token, role }) {
           {report && (
             <button
               onClick={() => downloadCsv(generatedReportToCsv(report), `idts-report-${report.unit_level}-${todayIso()}.csv`)}
-              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 8, fontSize: 14, fontWeight: 500, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer" }}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 8, fontSize: 16, fontWeight: 600, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer" }}
             >
               <Download size={15} /> Download CSV
             </button>
@@ -532,10 +532,10 @@ function GeneratedReportSection({ token, role }) {
       {report && (
         <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, backgroundColor: COLORS.white, overflow: "hidden" }}>
           <div style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, backgroundColor: COLORS.subtleBg }}>
-            <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.ink, margin: 0 }}>
+            <p style={{ fontSize: 16, fontWeight: 600, color: COLORS.ink, margin: 0 }}>
               {LEVEL_LABELS[report.unit_level]}: {report.unit_name}
             </p>
-            <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 2 }}>
+            <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 2 }}>
               {report.vaccines_included.join(", ")} · {report.start_date || "all time"} to {report.end_date || "present"}
             </p>
           </div>
@@ -549,13 +549,13 @@ function GeneratedReportSection({ token, role }) {
               ["Returned to service", report.cases_returned],
             ].map(([label, value]) => (
               <div key={label} style={{ backgroundColor: COLORS.white, padding: "14px 16px" }}>
-                <p style={{ fontSize: 20, fontWeight: 600, margin: 0, color: COLORS.ink }}>{value}</p>
-                <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 2 }}>{label}</p>
+                <p style={{ fontSize: 22, fontWeight: 600, margin: 0, color: COLORS.ink }}>{value}</p>
+                <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 2 }}>{label}</p>
               </div>
             ))}
           </div>
           {(report.doses_by_dose || []).length > 0 && (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 16 }}>
               <thead>
                 <tr style={{ backgroundColor: COLORS.subtleBg }}>
                   <th style={{ textAlign: "left", padding: "10px 14px", color: COLORS.ink, fontWeight: 600, borderTop: `1px solid ${COLORS.border}` }}>Vaccine / dose</th>
@@ -584,8 +584,8 @@ function GeneratedReportSection({ token, role }) {
           {report.aefi && (
             <div style={{ borderTop: `1px solid ${COLORS.border}` }}>
               <div style={{ padding: "12px 20px", backgroundColor: COLORS.subtleBg }}>
-                <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.ink, margin: 0 }}>Adverse events following immunization (AEFI)</p>
-                <p style={{ fontSize: 12, color: COLORS.muted, margin: "2px 0 0" }}>
+                <p style={{ fontSize: 16, fontWeight: 600, color: COLORS.ink, margin: 0 }}>Adverse events following immunization (AEFI)</p>
+                <p style={{ fontSize: 14, color: COLORS.muted, margin: "2px 0 0" }}>
                   Events with onset in this period{report.vaccines_included[0] === "All vaccines" ? "" : ", linked to the selected vaccines"}.
                 </p>
               </div>
@@ -599,13 +599,13 @@ function GeneratedReportSection({ token, role }) {
                   ["Serious, report not yet sent", report.aefi.serious_awaiting_report],
                 ].map(([label, value]) => (
                   <div key={label} style={{ backgroundColor: COLORS.white, padding: "14px 16px" }}>
-                    <p style={{ fontSize: 20, fontWeight: 600, margin: 0, color: COLORS.ink }}>{value}</p>
-                    <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 2 }}>{label}</p>
+                    <p style={{ fontSize: 22, fontWeight: 600, margin: 0, color: COLORS.ink }}>{value}</p>
+                    <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 2 }}>{label}</p>
                   </div>
                 ))}
               </div>
               {report.aefi.by_event_type.length > 0 && (
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 16 }}>
                   <thead>
                     <tr style={{ backgroundColor: COLORS.subtleBg }}>
                       <th style={{ textAlign: "left", padding: "10px 14px", color: COLORS.ink, fontWeight: 600, borderTop: `1px solid ${COLORS.border}` }}>Event type</th>
@@ -623,7 +623,7 @@ function GeneratedReportSection({ token, role }) {
                 </table>
               )}
               {report.aefi.by_antigen.length > 0 && (
-                <p style={{ fontSize: 13, color: COLORS.muted, margin: 0, padding: "12px 20px", borderTop: `1px solid ${COLORS.border}`, lineHeight: 1.6 }}>
+                <p style={{ fontSize: 15, color: COLORS.muted, margin: 0, padding: "12px 20px", borderTop: `1px solid ${COLORS.border}`, lineHeight: 1.6 }}>
                   <strong style={{ color: COLORS.ink }}>By vaccine:</strong>{" "}
                   {report.aefi.by_antigen.map((r) => `${r.antigen} (${r.count})`).join(", ")}.
                   {" "}An event linked to two vaccines is counted once in the totals and once under each vaccine.
@@ -697,7 +697,7 @@ export default function ReportsPage({ token, currentUser }) {
           {report && (
             <button
               onClick={handleDownload}
-              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 8, fontSize: 14, fontWeight: 500, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer" }}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 8, fontSize: 16, fontWeight: 600, color: COLORS.ink, backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer" }}
             >
               <Download size={15} /> Download CSV
             </button>
@@ -710,7 +710,7 @@ export default function ReportsPage({ token, currentUser }) {
           <p style={{ textAlign: "center", color: COLORS.muted }}>No vaccinations recorded in this period.</p>
         ) : (
           <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, overflow: "auto", backgroundColor: COLORS.white }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 16 }}>
               <thead>
                 <tr style={{ backgroundColor: COLORS.subtleBg }}>
                   <th style={{ textAlign: "left", padding: "10px 14px", color: COLORS.ink, fontWeight: 600, borderBottom: `1px solid ${COLORS.border}` }}>Antigen / dose</th>
@@ -731,7 +731,7 @@ export default function ReportsPage({ token, currentUser }) {
                       {sessionTypeValues.map((sv) => (
                         <td key={sv} style={{ padding: "10px 14px", textAlign: "right", color: COLORS.muted }}>{countFor(dr.antigen, dr.dose, sv)}</td>
                       ))}
-                      <td style={{ padding: "10px 14px", textAlign: "right", color: COLORS.ink, fontWeight: 500 }}>{rowTotal}</td>
+                      <td style={{ padding: "10px 14px", textAlign: "right", color: COLORS.ink, fontWeight: 600 }}>{rowTotal}</td>
                     </tr>
                   );
                 })}

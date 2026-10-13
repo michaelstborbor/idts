@@ -55,19 +55,19 @@ export default function CaseDetailModal({ token, child, defaulterCase, tracingAt
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <div>
           <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
-            <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, fontWeight: 500, color: statusMeta.color, backgroundColor: statusMeta.bg }}>
+            <span style={{ fontSize: 14, padding: "2px 8px", borderRadius: 999, fontWeight: 600, color: statusMeta.color, backgroundColor: statusMeta.bg }}>
               {statusMeta.label}
             </span>
-            <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, fontWeight: 500, color: PRIORITY_META[defaulterCase.priority].color, backgroundColor: PRIORITY_META[defaulterCase.priority].bg }}>
+            <span style={{ fontSize: 14, padding: "2px 8px", borderRadius: 999, fontWeight: 600, color: PRIORITY_META[defaulterCase.priority].color, backgroundColor: PRIORITY_META[defaulterCase.priority].bg }}>
               {PRIORITY_META[defaulterCase.priority].label}
             </span>
           </div>
-          <p style={{ fontSize: 14, color: COLORS.ink, margin: 0 }}>{defaulterCase.reason}</p>
-          <p style={{ fontSize: 14, color: COLORS.muted, marginTop: 4 }}>
+          <p style={{ fontSize: 16, color: COLORS.ink, margin: 0 }}>{defaulterCase.reason}</p>
+          <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 4 }}>
             Identified {fmtDate(defaulterCase.date_identified)}
           </p>
           {defaulterCase.status === "return_pending_confirmation" && (
-            <div style={{ display: "flex", gap: 8, marginTop: 8, padding: "10px 14px", borderRadius: 8, backgroundColor: "#E4F1EA", color: "#2F6B4F", fontSize: 14 }}>
+            <div style={{ display: "flex", gap: 8, marginTop: 8, padding: "10px 14px", borderRadius: 8, backgroundColor: "#DDF3E6", color: "#10633B", fontSize: 16 }}>
               <CheckCircle2 size={16} style={{ flexShrink: 0, marginTop: 2 }} />
               <span>A vaccination was recorded for this dose. Confirm below to close this case.</span>
             </div>
@@ -75,15 +75,15 @@ export default function CaseDetailModal({ token, child, defaulterCase, tracingAt
         </div>
 
         <div>
-          <h4 style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6B6660", marginBottom: 8 }}>
+          <h4 style={{ fontSize: 18, fontWeight: 700, color: "#10222E", marginBottom: 8 }}>
             Tracing attempts
           </h4>
           {attempts.length === 0 ? (
-            <p style={{ fontSize: 14, color: COLORS.muted }}>No attempts recorded yet.</p>
+            <p style={{ fontSize: 16, color: COLORS.muted }}>No attempts recorded yet.</p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {attempts.map((a) => (
-                <div key={a.id} style={{ fontSize: 14, padding: "10px 14px", borderRadius: 8, backgroundColor: COLORS.subtleBg }}>
+                <div key={a.id} style={{ fontSize: 16, padding: "10px 14px", borderRadius: 8, backgroundColor: COLORS.subtleBg }}>
                   <p style={{ margin: 0, color: COLORS.ink }}>
                     <strong>{fmtDate(a.attempt_date)}</strong> · {TRACING_METHODS.find((m) => m.value === a.method)?.label} — {TRACING_OUTCOMES.find((o) => o.value === a.outcome)?.label}
                   </p>
@@ -97,19 +97,19 @@ export default function CaseDetailModal({ token, child, defaulterCase, tracingAt
 
         {defaulterCase.status !== "closed" && !showClosure && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingTop: 16, borderTop: `1px solid ${COLORS.border}` }}>
-            <h4 style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6B6660", margin: 0 }}>
+            <h4 style={{ fontSize: 18, fontWeight: 700, color: "#10222E", margin: 0 }}>
               Record a tracing attempt
             </h4>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
                 <Label>Method</Label>
-                <SelectInput value={method} onChange={(e) => setMethod(e.target.value)} style={{ fontSize: 14, padding: "8px 12px" }}>
+                <SelectInput value={method} onChange={(e) => setMethod(e.target.value)} style={{ fontSize: 16, padding: "8px 12px" }}>
                   {TRACING_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </SelectInput>
               </div>
               <div>
                 <Label>Outcome</Label>
-                <SelectInput value={outcome} onChange={(e) => setOutcome(e.target.value)} style={{ fontSize: 14, padding: "8px 12px" }}>
+                <SelectInput value={outcome} onChange={(e) => setOutcome(e.target.value)} style={{ fontSize: 16, padding: "8px 12px" }}>
                   {TRACING_OUTCOMES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </SelectInput>
               </div>
@@ -124,7 +124,7 @@ export default function CaseDetailModal({ token, child, defaulterCase, tracingAt
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
-                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid ${COLORS.inputBorder}`, fontSize: 15, outline: "none", resize: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid ${COLORS.inputBorder}`, fontSize: 16, outline: "none", resize: "none", boxSizing: "border-box", fontFamily: "inherit" }}
               />
             </div>
             <ErrorText>{error}</ErrorText>
@@ -139,7 +139,7 @@ export default function CaseDetailModal({ token, child, defaulterCase, tracingAt
 
         {defaulterCase.status !== "closed" && showClosure && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingTop: 16, borderTop: `1px solid ${COLORS.border}` }}>
-            <h4 style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6B6660", margin: 0 }}>
+            <h4 style={{ fontSize: 18, fontWeight: 700, color: "#10222E", margin: 0 }}>
               Close this case
             </h4>
             <SelectInput value={closureReason} onChange={(e) => setClosureReason(e.target.value)}>
@@ -156,7 +156,7 @@ export default function CaseDetailModal({ token, child, defaulterCase, tracingAt
         )}
 
         {defaulterCase.status === "closed" && (
-          <p style={{ fontSize: 14, padding: "10px 14px", borderRadius: 8, color: "#6B6660", backgroundColor: "#EDEBE6", margin: 0 }}>
+          <p style={{ fontSize: 16, padding: "10px 14px", borderRadius: 8, color: "#475867", backgroundColor: "#E8EDF1", margin: 0 }}>
             Closed: {CLOSURE_REASONS.find((r) => r.value === defaulterCase.closure_reason)?.label || defaulterCase.closure_reason}
             {defaulterCase.closed_at ? ` on ${fmtDate(defaulterCase.closed_at.slice(0, 10))}` : ""}
           </p>
