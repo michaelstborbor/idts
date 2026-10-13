@@ -79,3 +79,10 @@ class AuditLog(Base):
     before: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     after: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # Who/where snapshots, so the activity log stays readable even after a
+    # user is renamed, and so sign-in events (which deliberately carry no
+    # user_id FK, see app/services/audit.py) still show who tried.
+    actor_username: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    actor_name: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    summary: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)

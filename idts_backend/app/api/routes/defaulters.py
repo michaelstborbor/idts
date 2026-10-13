@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, require_role
@@ -20,6 +20,7 @@ from app.schemas.defaulter import (
     TracingAttemptCreate,
     TracingAttemptOut,
 )
+from app.services import audit
 from app.services.schedule_service import evaluate_child, score_case_for_child
 
 router = APIRouter(prefix="/api/v1", tags=["due-list-and-defaulters"])
@@ -97,6 +98,7 @@ def get_due_list(
 @router.post("/defaulters/assign", response_model=DefaulterCaseOut, status_code=status.HTTP_201_CREATED)
 def assign_defaulter(
     payload: DefaulterAssignRequest,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("system_admin", "facility_focal_person", "facility_supervisor")),
 ):
@@ -138,6 +140,8 @@ def assign_defaulter(
         status="assigned",
     )
     db.add(case)
+    audit.record(db, current_user, "assign", "defaulter_case", case.id,
+                 f"Assigned follow-up for child {child.system_id} ({case.priority} priority)", request=request)
     db.commit()
     db.refresh(case)
     return case
@@ -162,6 +166,7 @@ def list_defaulter_cases(
 def record_tracing_attempt(
     case_id: uuid.UUID,
     payload: TracingAttemptCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("system_admin", "chw", "facility_focal_person")),
 ):
@@ -185,6 +190,8 @@ def record_tracing_attempt(
     db.add(attempt)
     if case.status == "assigned":
         case.status = "in_tracing"
+    audit.record(db, current_user, "trace", "defaulter_case", case.id,
+                 f"Tracing attempt: {payload.method.replace('_', ' ')}, {payload.outcome.replace('_', ' ')}", request=request)
     db.commit()
     db.refresh(attempt)
     return attempt
@@ -194,6 +201,7 @@ def record_tracing_attempt(
 def close_defaulter_case(
     case_id: uuid.UUID,
     payload: CaseCloseRequest,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_role("system_admin", "facility_focal_person", "facility_supervisor")
@@ -221,6 +229,8 @@ def close_defaulter_case(
     case.status = "closed"
     case.closure_reason = payload.closure_reason
     case.closed_at = datetime.now(timezone.utc)
+    audit.record(db, current_user, "close", "defaulter_case", case.id,
+                 f"Closed follow-up case: {payload.closure_reason.replace('_', ' ')}", request=request)
     db.commit()
     db.refresh(case)
     return case

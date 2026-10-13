@@ -224,18 +224,21 @@ async function main() {
     await page.click('button:has-text("Sign in")');
     await page.waitForSelector("text=Dashboard", { timeout: 10000 });
 
-    const adminTabVisible = await page.$('button:has-text("Admin")');
-    if (!adminTabVisible) throw new Error("Admin tab is not visible for a system_admin user.");
+    const adminTabVisible = await page.$('button:has-text("User management")');
+    if (!adminTabVisible) throw new Error("User management is not in the menu for a system_admin user.");
     await adminTabVisible.click();
     await page.waitForSelector('button:has-text("Create user")', { timeout: 5000 });
 
     await page.click('button:has-text("Create user")');
     await page.waitForSelector("text=Temporary password", { timeout: 5000 });
-    const createUserInputs = await page.$$('input[type="text"], input:not([type])');
-    await createUserInputs[0].fill(`Smoke Test User ${Date.now()}`);
+    // A National Supervisor only needs a country, which is pre-selected, so
+    // the test doesn't have to walk the district/chiefdom/facility cascade.
+    await page.selectOption(".modal-overlay select", "national_user");
+    await page.waitForTimeout(800);
+    await page.fill('.modal-overlay input[placeholder="e.g. Adama Sesay"]', `Smoke Test User ${Date.now()}`);
     const usernameValue = `smoketest${Date.now()}`.slice(0, 20);
-    await createUserInputs[1].fill(usernameValue);
-    await createUserInputs[2].fill("temporarypass123");
+    await page.fill('.modal-overlay input[placeholder="e.g. asesay"]', usernameValue);
+    await page.fill('.modal-overlay input[placeholder="At least 8 characters"]', "temporarypass123");
     await page.click('button:has-text("Create account")');
     await page.waitForTimeout(800);
     const adminListText = await page.textContent("body");

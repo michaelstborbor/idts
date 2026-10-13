@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { KeyRound, Pencil, Trash2, UserPlus, UserX, UserCheck } from "lucide-react";
+import { KeyRound, LockOpen, Pencil, Search, Trash2, UserPlus, UserX, UserCheck } from "lucide-react";
 import { api } from "../api/client.js";
 import { COLORS, CONTENT_MAX_WIDTH, facilityOptionLabel } from "../constants.js";
 import { ErrorText, Label, Modal, Pill, PrimaryButton, SecondaryButton, SelectInput, TextInput } from "../components/ui.jsx";
@@ -49,6 +49,10 @@ function GeographyFields({ token, role, onChange }) {
   const [countries, setCountries] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [chiefdoms, setChiefdoms] = useState([]);
+  const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [unlockingId, setUnlockingId] = useState(null);
   const [facilityOptions, setFacilityOptions] = useState([]);
 
   const [countryId, setCountryId] = useState("");
@@ -309,10 +313,21 @@ function EditUserModal({ token, user, onSaved, onClose }) {
   );
 }
 
+const iconBtn = {
+  width: 42, height: 42, borderRadius: 10, border: `1.5px solid ${COLORS.inputBorder}`, backgroundColor: COLORS.white,
+  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+};
+const dangerIconBtn = { ...iconBtn, border: "1.5px solid #F2A9AD", backgroundColor: COLORS.dangerTint };
+
+function fmtDateTime(iso) {
+  const d = new Date(iso.endsWith("Z") || iso.includes("+") ? iso : `${iso}Z`);
+  return d.toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
 function generateTempPassword() {
   // Avoids look-alike characters (0/O, 1/l/I) so it's easy to read out or type.
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-  const bytes = new Uint32Array(12);
+  const bytes = new Uint32Array(16);
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (b) => chars[b % chars.length]).join("");
 }
@@ -387,6 +402,10 @@ export default function AdminPage({ token, facilities, currentUserId }) {
   const [editTarget, setEditTarget] = useState(null);
   const [districts, setDistricts] = useState([]);
   const [chiefdoms, setChiefdoms] = useState([]);
+  const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [unlockingId, setUnlockingId] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -414,6 +433,19 @@ export default function AdminPage({ token, facilities, currentUserId }) {
       setError(err.message);
     } finally {
       setTogglingId(null);
+    }
+  }
+
+  async function unlock(user) {
+    setUnlockingId(user.id);
+    setError("");
+    try {
+      await api.unlockUser(token, user.id);
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUnlockingId(null);
     }
   }
 
@@ -449,15 +481,61 @@ export default function AdminPage({ token, facilities, currentUserId }) {
     return "Not assigned";
   }
 
+  const now = Date.now();
+  const isLocked = (u) => u.locked_until && new Date(u.locked_until.endsWith("Z") || u.locked_until.includes("+") ? u.locked_until : `${u.locked_until}Z`).getTime() > now;
+  const counts = {
+    all: users.length,
+    active: users.filter((u) => u.is_active).length,
+    inactive: users.filter((u) => !u.is_active).length,
+    locked: users.filter(isLocked).length,
+  };
+  const q = query.trim().toLowerCase();
+  const shown = users.filter((u) =>
+    (!q || u.full_name.toLowerCase().includes(q) || u.username.toLowerCase().includes(q))
+    && (!roleFilter || u.role === roleFilter)
+    && (statusFilter === "all" || (statusFilter === "active" && u.is_active) || (statusFilter === "inactive" && !u.is_active) || (statusFilter === "locked" && isLocked(u)))
+  );
+
   return (
     <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap", marginBottom: 16 }}>
+        <div style={{ flex: "1 1 260px", position: "relative" }}>
+          <Search size={18} color={COLORS.muted} style={{ position: "absolute", left: 14, top: 14, pointerEvents: "none" }} aria-hidden="true" />
+          <TextInput value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or username" aria-label="Search users" style={{ paddingLeft: 42 }} />
+        </div>
+        <div style={{ flex: "0 1 240px" }}>
+          <SelectInput value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} aria-label="Filter by role">
+            <option value="">All roles</option>
+            {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+          </SelectInput>
+        </div>
         <button
           onClick={() => setShowCreate(true)}
-          style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 8, fontSize: 16, fontWeight: 600, color: "#fff", backgroundColor: COLORS.primary, border: "none", cursor: "pointer" }}
+          className="btn-primary"
+          style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 46, padding: "0 18px", borderRadius: 10, fontSize: 16, fontWeight: 600, color: "#fff", backgroundColor: COLORS.primary, border: "none", cursor: "pointer" }}
         >
-          <UserPlus size={16} /> Create user
+          <UserPlus size={18} /> Create user
         </button>
+      </div>
+
+      <div role="group" aria-label="Filter by status" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+        {[["all", "All"], ["active", "Active"], ["inactive", "Deactivated"], ["locked", "Locked"]].map(([value, label]) => {
+          const active = statusFilter === value;
+          return (
+            <button
+              key={value}
+              onClick={() => setStatusFilter(value)}
+              aria-pressed={active}
+              style={{
+                minHeight: 40, padding: "6px 14px", borderRadius: 999, fontSize: 16, fontWeight: 600, cursor: "pointer",
+                border: `1.5px solid ${active ? COLORS.primary : COLORS.inputBorder}`,
+                backgroundColor: active ? COLORS.primary : COLORS.white, color: active ? COLORS.white : COLORS.ink,
+              }}
+            >
+              {label} <span style={{ opacity: 0.75 }}>({counts[value]})</span>
+            </button>
+          );
+        })}
       </div>
 
       {error && (
@@ -469,33 +547,49 @@ export default function AdminPage({ token, facilities, currentUserId }) {
       {loading ? (
         <p style={{ textAlign: "center", color: COLORS.muted }}>Loading…</p>
       ) : (
-        <div style={{ borderRadius: 12, border: `1px solid ${COLORS.border}`, overflow: "hidden", backgroundColor: COLORS.white }}>
-          {users.map((u, i) => (
+        <div style={{ borderRadius: 14, border: `1px solid ${COLORS.border}`, overflow: "hidden", backgroundColor: COLORS.white }}>
+          {shown.length === 0 && (
+            <p style={{ textAlign: "center", color: COLORS.muted, padding: "32px 16px", margin: 0 }}>No users match these filters.</p>
+          )}
+          {shown.map((u, i) => (
             <div
               key={u.id}
-              style={{ padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, borderTop: i === 0 ? "none" : `1px solid ${COLORS.border}`, opacity: u.is_active ? 1 : 0.55 }}
+              style={{ padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, borderTop: i === 0 ? "none" : `1px solid ${COLORS.border}`, backgroundColor: u.is_active ? undefined : COLORS.subtleBg }}
             >
               <div style={{ minWidth: 0 }}>
                 <p style={{ fontSize: 16, fontWeight: 600, color: COLORS.ink, margin: 0 }}>
                   {u.full_name} <span style={{ color: COLORS.muted, fontWeight: 400 }}>@{u.username}</span>
                   {u.role === "system_admin" && <span style={{ marginLeft: 8 }}><Pill label="Admin" color="#0A5A8A" bg="#DCEBF5" /></span>}
                   {u.id === currentUserId && <span style={{ marginLeft: 6 }}><Pill label="You" color="#475867" bg="#E8EDF1" /></span>}
+                  {isLocked(u) && <span style={{ marginLeft: 6 }}><Pill label="Locked" color="#FFFFFF" bg="#B3141D" /></span>}
+                  {!u.is_active && <span style={{ marginLeft: 6 }}><Pill label="Deactivated" color="#3E5160" bg="#E8EDF1" /></span>}
                 </p>
-                <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 2 }}>
+                <p style={{ fontSize: 16, color: COLORS.muted, margin: "2px 0 0" }}>
                   {ROLE_LABELS[u.role] || u.role} · {assignmentLabel(u)}
-                  {!u.is_active ? " · Deactivated" : ""}
+                </p>
+                <p style={{ fontSize: 14, color: COLORS.muted, margin: "2px 0 0" }}>
+                  {u.last_login_at ? `Last signed in ${fmtDateTime(u.last_login_at)}` : "Never signed in"}
                 </p>
               </div>
-              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                {isLocked(u) && (
+                  <button
+                    onClick={() => unlock(u)}
+                    disabled={unlockingId === u.id}
+                    title="Unlock"
+                    aria-label={`Unlock ${u.full_name}`}
+                    style={{ ...iconBtn, width: "auto", padding: "0 12px", gap: 6, fontSize: 15, fontWeight: 700, color: COLORS.primaryDark }}
+                  >
+                    <LockOpen size={18} /> Unlock
+                  </button>
+                )}
                 <button
                   onClick={() => setEditTarget({ ...u, current_assignment_label: assignmentLabel(u) })}
                   title="Edit"
-                  style={{
-                    padding: 8, borderRadius: 8, border: `1px solid ${COLORS.inputBorder}`, backgroundColor: COLORS.subtleBg,
-                    cursor: "pointer", display: "flex", flexShrink: 0,
-                  }}
+                  aria-label={`Edit ${u.full_name}`}
+                  style={iconBtn}
                 >
-                  <Pencil size={15} color={COLORS.ink} />
+                  <Pencil size={18} color={COLORS.ink} />
                 </button>
                 {u.id !== currentUserId && (
                   <>
@@ -503,33 +597,27 @@ export default function AdminPage({ token, facilities, currentUserId }) {
                       onClick={() => toggleActive(u)}
                       disabled={togglingId === u.id || removingId === u.id}
                       title={u.is_active ? "Deactivate" : "Reactivate"}
-                      style={{
-                        padding: 8, borderRadius: 8, border: `1px solid ${u.is_active ? "#FDE1E2" : COLORS.inputBorder}`,
-                        backgroundColor: u.is_active ? "#FFE6D5" : COLORS.subtleBg, cursor: "pointer", display: "flex", flexShrink: 0,
-                      }}
+                      aria-label={`${u.is_active ? "Deactivate" : "Reactivate"} ${u.full_name}`}
+                      style={u.is_active ? dangerIconBtn : iconBtn}
                     >
-                      {u.is_active ? <UserX size={15} color="#A1131B" /> : <UserCheck size={15} color={COLORS.ink} />}
+                      {u.is_active ? <UserX size={18} color="#A1131B" /> : <UserCheck size={18} color={COLORS.ink} />}
                     </button>
                     <button
                       onClick={() => setResetTarget(u)}
                       title="Reset password"
-                      style={{
-                        padding: 8, borderRadius: 8, border: `1px solid ${COLORS.inputBorder}`, backgroundColor: COLORS.subtleBg,
-                        cursor: "pointer", display: "flex", flexShrink: 0,
-                      }}
+                      aria-label={`Reset password for ${u.full_name}`}
+                      style={iconBtn}
                     >
-                      <KeyRound size={15} color={COLORS.ink} />
+                      <KeyRound size={18} color={COLORS.ink} />
                     </button>
                     <button
                       onClick={() => removeUser(u)}
                       disabled={togglingId === u.id || removingId === u.id}
                       title="Remove permanently"
-                      style={{
-                        padding: 8, borderRadius: 8, border: "1px solid #FDE1E2", backgroundColor: "#FFE6D5",
-                        cursor: "pointer", display: "flex", flexShrink: 0,
-                      }}
+                      aria-label={`Remove ${u.full_name} permanently`}
+                      style={dangerIconBtn}
                     >
-                      <Trash2 size={15} color="#A1131B" />
+                      <Trash2 size={18} color="#A1131B" />
                     </button>
                   </>
                 )}

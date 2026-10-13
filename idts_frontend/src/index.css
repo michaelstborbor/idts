@@ -38,8 +38,9 @@ input:focus, select:focus, textarea:focus {
   border-color: #0A5A8A !important;
   box-shadow: 0 0 0 3px rgba(10, 90, 138, 0.18);
 }
-.app-bar :focus-visible {
+.sidebar :focus-visible {
   outline-color: #FFFFFF;
+  outline-offset: -3px;
 }
 
 /* Two-column form/stat grids collapse to one column on narrow screens.
@@ -48,18 +49,6 @@ input:focus, select:focus, textarea:focus {
 @media (max-width: 560px) {
   .responsive-grid-2 {
     grid-template-columns: 1fr !important;
-  }
-}
-
-/* App header: keeps title/actions on one row on desktop, stacks on
-   narrow screens so buttons never get clipped or overlap the title. */
-@media (max-width: 640px) {
-  .app-header-row {
-    flex-direction: column !important;
-    align-items: stretch !important;
-  }
-  .app-header-actions {
-    justify-content: flex-end;
   }
 }
 
@@ -77,39 +66,6 @@ table {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Nav bar + header buttons: color + a light "press/hover" animation,
-   applied via CSS since inline styles can't do :hover/:active. */
-.nav-tab {
-  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
-}
-.nav-tab:hover {
-  background-color: rgba(255, 255, 255, 0.12);
-  color: #FFFFFF !important;
-}
-.nav-tab.active:hover {
-  background-color: transparent;
-}
-
-/* App bar: the facility header. Tabs scroll sideways on phones rather
-   than wrapping into a stack of rows. */
-.app-nav {
-  scrollbar-width: none;
-}
-.app-nav::-webkit-scrollbar {
-  display: none;
-}
-@media (max-width: 640px) {
-  .app-bar-user {
-    display: none !important;
-  }
-  .page-title {
-    font-size: 24px !important;
-  }
-  .app-bar-tagline {
-    display: none;
-  }
-}
-
 .icon-btn {
   transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
@@ -119,22 +75,6 @@ table {
 }
 .icon-btn:active {
   transform: scale(0.94);
-}
-
-/* Dropdown menu (Reports / Settings / Logout) */
-.menu-dropdown {
-  animation: menu-pop 0.12s ease-out;
-  transform-origin: top right;
-}
-@keyframes menu-pop {
-  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-.menu-item {
-  transition: background-color 0.12s ease;
-}
-.menu-item:hover {
-  background-color: #EAF1F5;
 }
 
 /* Primary/secondary buttons from components/ui.jsx */
@@ -197,4 +137,370 @@ table {
 }
 .list-row:hover {
   background-color: #F5F9FC !important;
+}
+
+/* ------------------------------------------------------------------
+   App shell: collapsible sidebar on desktop, slide-in drawer on
+   tablets and phones.
+   ------------------------------------------------------------------ */
+.app-shell {
+  display: flex;
+  align-items: stretch;
+}
+.app-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.app-content {
+  padding: 24px 24px 64px;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 268px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: #073F63;
+  color: #FFFFFF;
+  overflow-x: hidden;
+  overflow-y: auto;
+  transition: width 0.18s ease;
+  z-index: 40;
+}
+.sidebar.collapsed {
+  width: 76px;
+}
+.sidebar.collapsed .nav-label {
+  display: none !important;
+}
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 16px 16px 19px;
+  min-height: 76px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+.sidebar-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #FFFFFF;
+  color: #073F63;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sidebar-close {
+  display: none;
+  margin-left: auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sidebar-nav {
+  flex: 1;
+  padding: 8px 0;
+}
+.sidebar-section {
+  padding: 8px 0 4px;
+}
+.sidebar-section + .sidebar-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.sidebar-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.62);
+  margin: 6px 0 4px;
+  padding: 0 22px;
+}
+.sidebar-item {
+  position: relative;
+  width: calc(100% - 16px);
+  margin: 2px 8px;
+  min-height: 46px;
+  padding: 0 12px 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 16px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+}
+.sidebar-item.active {
+  background: rgba(255, 255, 255, 0.16);
+  color: #FFFFFF;
+  font-weight: 700;
+}
+.sidebar-item.active::before {
+  content: "";
+  position: absolute;
+  left: -8px;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: #5FD39A;
+}
+.sidebar-icon {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+}
+.sidebar-badge {
+  min-width: 26px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #FFD24D;
+  color: #10222E;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+.sidebar-dot {
+  position: absolute;
+  top: -3px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #FFD24D;
+  border: 2px solid #073F63;
+}
+.sidebar-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 8px 0 12px;
+}
+.sidebar-avatar {
+  width: 32px;
+  height: 32px;
+  margin-left: -5px;
+  border-radius: 999px;
+  background: #5FD39A;
+  color: #073F63;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sidebar.collapsed .sidebar-item {
+  justify-content: center;
+  padding: 0;
+}
+.sidebar.collapsed .sidebar-avatar {
+  margin-left: 0;
+}
+.sidebar.collapsed .sidebar-brand {
+  justify-content: center;
+  padding: 18px 0 16px;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  padding: 12px 24px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #D3DEE5;
+}
+.topbar-menu {
+  display: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1.5px solid #9FB2BF;
+  background: #FFFFFF;
+  color: #10222E;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.net-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0B5530;
+  background: #DDF3E6;
+  flex-shrink: 0;
+}
+.net-status.offline {
+  color: #FFFFFF;
+  background: #B3141D;
+}
+.offline-banner {
+  margin: 0;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #6A4300;
+  background: #FFF1CC;
+  border-bottom: 1px solid #F2D27A;
+}
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: rgba(16, 34, 46, 0.5);
+}
+
+/* Tablets and phones: the sidebar becomes a drawer opened from the top bar. */
+@media (max-width: 1023px) {
+  .sidebar,
+  .sidebar.collapsed {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    height: auto;
+    width: min(300px, 86vw);
+    z-index: 60;
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 0.2s ease, visibility 0.2s;
+    box-shadow: 8px 0 24px rgba(7, 63, 99, 0.3);
+  }
+  .sidebar.open {
+    transform: none;
+    visibility: visible;
+  }
+  .sidebar.collapsed .nav-label {
+    display: revert !important;
+  }
+  .sidebar.collapsed .sidebar-item {
+    justify-content: flex-start;
+    padding: 0 12px 0 14px;
+  }
+  .sidebar.collapsed .sidebar-brand {
+    justify-content: flex-start;
+    padding: 18px 16px 16px 19px;
+  }
+  .sidebar-collapse,
+  .sidebar-dot {
+    display: none !important;
+  }
+  .sidebar-close,
+  .topbar-menu {
+    display: flex;
+  }
+}
+@media (min-width: 1024px) {
+  .drawer-backdrop {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .topbar {
+    padding: 10px 16px;
+    gap: 10px;
+    min-height: 64px;
+  }
+  .page-title {
+    font-size: 20px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .app-content {
+    padding: 20px 16px 56px;
+  }
+  .net-status-label,
+  .topbar-register-label {
+    display: none;
+  }
+  .net-status {
+    padding: 8px;
+  }
+  .topbar-register {
+    padding: 0 12px !important;
+  }
+}
+
+/* Admin pages: tables scroll sideways inside their card on small screens. */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.data-table th {
+  text-align: left;
+  font-weight: 700;
+  color: #3E5160;
+  background: #EAF1F5;
+  padding: 10px 14px;
+  border-bottom: 1px solid #D3DEE5;
+  white-space: nowrap;
+}
+.data-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #E3ECF2;
+  vertical-align: top;
+}
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+@media (max-width: 760px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.data-table.middle td {
+  vertical-align: middle;
+}
+.activity-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+@media (max-width: 1280px) {
+  .activity-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .activity-filters > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 560px) {
+  .activity-filters {
+    grid-template-columns: 1fr;
+  }
 }

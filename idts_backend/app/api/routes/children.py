@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, require_role
@@ -27,6 +27,7 @@ from app.schemas.child import (
     DoseEvaluationOut,
     DuplicateCandidate,
 )
+from app.services import audit
 from app.services.schedule_service import evaluate_child, is_fully_immunized_child
 
 router = APIRouter(prefix="/api/v1/children", tags=["children"])
@@ -145,6 +146,7 @@ def search_children(
 @router.post("", response_model=ChildOut, status_code=status.HTTP_201_CREATED)
 def register_child(
     payload: ChildCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_role("system_admin", "facility_focal_person", "vaccinator")
@@ -170,6 +172,9 @@ def register_child(
         status="active",
     )
     db.add(child)
+    # Activity log names children by system ID only: it's read by admins
+    # who don't need the child's name or caregiver details.
+    audit.record(db, current_user, "create", "child", child.id, f"Registered child {child.system_id}", request=request)
     db.commit()
     db.refresh(child)
     return child
@@ -210,6 +215,7 @@ def get_child(
 def update_child(
     child_id: uuid.UUID,
     payload: ChildUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_role("system_admin", "facility_focal_person", "vaccinator")
@@ -236,6 +242,10 @@ def update_child(
         if field == "full_name" and isinstance(value, str):
             value = value.strip()
         setattr(child, field, value)
+    if update_data:
+        audit.record(db, current_user, "update", "child", child.id,
+                     f"Edited child {child.system_id}: " + ", ".join(f.replace("_", " ") for f in update_data),
+                     request=request)
 
     db.commit()
     db.refresh(child)
@@ -250,6 +260,7 @@ def update_child(
 @router.delete("/{child_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_child(
     child_id: uuid.UUID,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("system_admin", "facility_focal_person")),
 ):
@@ -274,5 +285,6 @@ def delete_child(
 
     child.deleted_at = datetime.now(timezone.utc)
     child.status = "deleted"
+    audit.record(db, current_user, "delete", "child", child.id, f"Deleted child {child.system_id}", request=request)
     db.commit()
     return None

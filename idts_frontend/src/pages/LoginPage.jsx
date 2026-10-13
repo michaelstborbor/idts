@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { api, setStoredToken } from "../api/client.js";
 import { ShieldCheck, Syringe, Users } from "lucide-react";
 import { COLORS, FONT_STACK } from "../constants.js";
@@ -9,6 +9,9 @@ export default function LoginPage({ onLogin }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [branding, setBranding] = useState(null);
+
+  useEffect(() => { api.getPublicSettings().then(setBranding).catch(() => {}); }, []);
 
   async function submit() {
     if (!username || !password) {
@@ -36,7 +39,14 @@ export default function LoginPage({ onLogin }) {
           <span aria-hidden="true" style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: COLORS.white, color: COLORS.primaryDark, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Syringe size={26} strokeWidth={2.25} />
           </span>
-          <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: "0.02em" }}>IDTS</span>
+          <span>
+            <span style={{ display: "block", fontSize: 22, fontWeight: 700, letterSpacing: "0.02em", lineHeight: 1.1 }}>IDTS</span>
+            {branding && (
+              <span style={{ display: "block", fontSize: 15, color: "rgba(255,255,255,0.82)" }}>
+                {branding.organisation_name} · {branding.programme_name}
+              </span>
+            )}
+          </span>
         </div>
         <div style={{ maxWidth: 460 }}>
           <h1 style={{ fontSize: 40, fontWeight: 700, lineHeight: 1.15, margin: 0 }}>

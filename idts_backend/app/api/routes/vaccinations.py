@@ -1,16 +1,17 @@
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, require_role
 from app.core.scope import ensure_child_in_scope, ensure_facility_in_scope
 from app.db.session import get_db
-from app.models.child import Child, VaccinationEvent
+from app.models.child import Child, ScheduleEntry, VaccinationEvent
 from app.models.defaulter import DefaulterCase
 from app.models.user import User
 from app.schemas.defaulter import VaccinationCreate, VaccinationOut
+from app.services import audit
 from app.services.schedule_service import evaluate_child
 
 router = APIRouter(prefix="/api/v1/children", tags=["vaccinations"])
@@ -20,6 +21,7 @@ router = APIRouter(prefix="/api/v1/children", tags=["vaccinations"])
 def record_vaccination(
     child_id: uuid.UUID,
     payload: VaccinationCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("system_admin", "facility_focal_person", "vaccinator")),
 ):
@@ -86,6 +88,10 @@ def record_vaccination(
     if open_case is not None:
         open_case.status = "return_pending_confirmation"
 
+    entry = db.get(ScheduleEntry, payload.schedule_entry_id)
+    dose_label = f"{entry.antigen} dose {entry.dose_number}" if entry else "a dose"
+    audit.record(db, current_user, "create", "vaccination", event.id,
+                 f"Recorded {dose_label} for child {child.system_id}", request=request)
     db.commit()
     db.refresh(event)
     return event
