@@ -4,7 +4,7 @@ import { ShieldCheck, Syringe, Users } from "lucide-react";
 import { COLORS, FONT_STACK } from "../constants.js";
 import { ErrorText, Label, PrimaryButton, TextInput } from "../components/ui.jsx";
 
-export default function LoginPage({ onLogin }) {
+export default function LoginPage({ onLogin, notice }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -26,7 +26,11 @@ export default function LoginPage({ onLogin }) {
       const me = await api.getMe(access_token);
       onLogin(access_token, me);
     } catch (err) {
-      setError(err.status === 401 ? "Incorrect username or password." : err.message);
+      setError(
+        err.status === 401 ? "Incorrect username or password."
+          : err.status === 0 ? "You're offline. Signing in needs a connection; once signed in, you can keep working offline."
+            : err.message
+      );
     } finally {
       setLoading(false);
     }
@@ -89,6 +93,11 @@ export default function LoginPage({ onLogin }) {
                 autoComplete="current-password"
               />
             </div>
+            {notice && !error && (
+              <p role="status" style={{ fontSize: 15, margin: "0 0 18px", padding: "10px 14px", borderRadius: 10, color: "#6A4300", backgroundColor: "#FFF1CC", lineHeight: 1.5 }}>
+                {notice}
+              </p>
+            )}
             {error && <div style={{ marginBottom: 18 }}><ErrorText>{error}</ErrorText></div>}
             <PrimaryButton onClick={submit} disabled={loading} style={{ width: "100%", minHeight: 50, fontSize: 17 }}>
               {loading ? "Signing in…" : "Sign in"}

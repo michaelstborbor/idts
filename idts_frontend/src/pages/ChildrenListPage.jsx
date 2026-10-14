@@ -195,7 +195,7 @@ export default function ChildrenListPage({ token, children, dueRowsByChildId, fu
                 )}
                 <div style={{ minWidth: 0 }}>
                   <p style={{ fontWeight: 600, fontSize: 16, color: COLORS.ink, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.full_name}</p>
-                  <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 2 }}>{ageLabel(c.dob)} · <span style={{ whiteSpace: "nowrap" }}>{c.system_id}</span></p>
+                  <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 2 }}>{ageLabel(c.dob)} · {c._pending ? <span className="pending-chip">Waiting to sync</span> : <span style={{ whiteSpace: "nowrap" }}>{c.system_id}</span>}</p>
                 </div>
               </div>
               {next ? (

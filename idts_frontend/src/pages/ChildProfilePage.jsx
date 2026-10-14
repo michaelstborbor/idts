@@ -67,6 +67,11 @@ export default function ChildProfilePage({ token, childId, facilities, onBack, o
               </span>
             )}
           </h2>
+          {child._pending && (
+            <p style={{ margin: "6px 0 0" }}>
+              <span className="pending-chip">Changes saved on this device, waiting to sync</span>
+            </p>
+          )}
           <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 4 }}>
             {ageLabel(child.dob)} · Born {fmtDate(child.dob)} · {child.sex === "F" ? "Female" : "Male"} · {child.system_id}
           </p>
@@ -153,7 +158,10 @@ export default function ChildProfilePage({ token, childId, facilities, onBack, o
                   </p>
                   {v.notes && <p style={{ fontSize: 16, color: COLORS.muted, marginTop: 2, fontStyle: "italic" }}>{v.notes}</p>}
                 </div>
-                <p style={{ fontSize: 16, color: COLORS.muted, flexShrink: 0 }}>{fmtDate(v.event_date)}</p>
+                <div style={{ flexShrink: 0, textAlign: "right" }}>
+                  <p style={{ fontSize: 16, color: COLORS.muted, margin: 0 }}>{fmtDate(v.event_date)}</p>
+                  {v._pending && <span className="pending-chip">Waiting to sync</span>}
+                </div>
               </div>
             );
           })}

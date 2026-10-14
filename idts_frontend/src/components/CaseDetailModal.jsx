@@ -26,7 +26,7 @@ export default function CaseDetailModal({ token, child, defaulterCase, tracingAt
         outcome,
         next_followup_date: nextFollowup || null,
         notes: notes.trim() || null,
-      });
+      }, { label: `Tracing attempt for ${child.full_name}` });
       setNotes("");
       setNextFollowup("");
       onAttemptRecorded();
@@ -86,6 +86,7 @@ export default function CaseDetailModal({ token, child, defaulterCase, tracingAt
                 <div key={a.id} style={{ fontSize: 16, padding: "10px 14px", borderRadius: 8, backgroundColor: COLORS.subtleBg }}>
                   <p style={{ margin: 0, color: COLORS.ink }}>
                     <strong>{fmtDate(a.attempt_date)}</strong> · {TRACING_METHODS.find((m) => m.value === a.method)?.label} — {TRACING_OUTCOMES.find((o) => o.value === a.outcome)?.label}
+                    {a._pending && <span className="pending-chip" style={{ marginLeft: 8 }}>Waiting to sync</span>}
                   </p>
                   {a.next_followup_date && <p style={{ margin: 0, color: COLORS.muted }}>Next follow-up: {fmtDate(a.next_followup_date)}</p>}
                   {a.notes && <p style={{ margin: "4px 0 0", color: COLORS.muted, fontStyle: "italic" }}>{a.notes}</p>}

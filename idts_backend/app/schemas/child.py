@@ -24,6 +24,10 @@ class UserOut(BaseModel):
 
 
 class ChildCreate(BaseModel):
+    # Optional client-generated id. Devices that register a child offline
+    # pick the id themselves so later offline entries (doses) can refer to
+    # it, and so a resubmitted registration returns the same record.
+    id: Optional[uuid.UUID] = None
     full_name: str = Field(min_length=1, max_length=200)
     sex: str = Field(pattern="^(M|F|unknown)$")
     dob: date
@@ -99,3 +103,34 @@ class ChildSearchResult(ChildDetailOut):
     ChildDetailOut plus the facility NAME (not just its id), so the
     searcher can see at a glance which facility a match is registered at."""
     facility_name: Optional[str] = None
+
+
+class OfflineScheduleEntry(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    antigen: str
+    dose_number: int
+    recommended_age_days: int
+    minimum_age_days: int
+    minimum_interval_from_prior_dose_days: Optional[int] = None
+    prior_entry_id: Optional[uuid.UUID] = None
+    due_soon_window_days: int
+    overdue_window_days: int
+    defaulter_threshold_days: int
+    maximum_catchup_age_days: Optional[int] = None
+    dosage: Optional[str] = None
+    route: Optional[str] = None
+    site: Optional[str] = None
+
+
+class OfflineChild(ChildDetailOut):
+    # Not "vaccinations": that name would pick up the ORM relationship.
+    vaccination_history: list[dict] = []
+
+
+class OfflinePack(BaseModel):
+    """Everything a device needs to keep working without a connection."""
+    generated_at: datetime
+    truncated: bool = False
+    schedule: list[OfflineScheduleEntry]
+    children: list[OfflineChild]
