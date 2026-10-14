@@ -375,6 +375,21 @@ export const api = {
   getPublicSettings: () => request("/api/v1/settings/public"),
   getSystemInfo: (token) => request("/api/v1/admin/system-info", { token }),
   listAuditLogs: (token, params) => request("/api/v1/admin/audit-logs", { token, params }),
+  // DHIS2
+  getDhis2Config: (token) => request("/api/v1/admin/dhis2/config", { token }),
+  saveDhis2Connection: (token, body) => request("/api/v1/admin/dhis2/connection", { method: "PUT", token, body }),
+  testDhis2: (token) => request("/api/v1/admin/dhis2/test", { method: "POST", token }),
+  searchDhis2OrgUnits: (token, q) => request("/api/v1/admin/dhis2/remote/org-units", { token, params: { q } }),
+  suggestDhis2OrgUnits: (token) => request("/api/v1/admin/dhis2/mapping/org-units/suggestions", { token }),
+  listDhis2DataSets: (token) => request("/api/v1/admin/dhis2/remote/data-sets", { token }),
+  listDhis2DataElements: (token) => request("/api/v1/admin/dhis2/remote/data-elements", { token }),
+  saveDhis2OrgUnits: (token, body) => request("/api/v1/admin/dhis2/mapping/org-units", { method: "PUT", token, body }),
+  saveDhis2Doses: (token, body) => request("/api/v1/admin/dhis2/mapping/doses", { method: "PUT", token, body }),
+  previewDhis2Export: (token, period) => request("/api/v1/admin/dhis2/export/preview", { token, params: { period } }),
+  downloadDhis2Export: (token, period) =>
+    download("/api/v1/admin/dhis2/export/download", { token, params: { period }, filename: `idts-dhis2-${period}.json` }),
+  pushDhis2Export: (token, period, dryRun) =>
+    request("/api/v1/admin/dhis2/export/push", { method: "POST", token, body: { period, dry_run: dryRun } }),
   exportAuditLogs: (token, params) =>
     download("/api/v1/admin/audit-logs/export", {
       token, params, filename: `idts-activity-log-${new Date().toISOString().slice(0, 10)}.csv`,

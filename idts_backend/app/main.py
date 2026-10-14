@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import admin, aefi, auth, children, dashboard, defaulters, facilities, reports, users, vaccinations
+from app.api.routes import admin, aefi, auth, children, dashboard, defaulters, dhis2, facilities, reports, users, vaccinations
 from app.db.base import Base
 from app.db.schema_sync import sync_missing_columns
 from app.db.session import engine
@@ -91,6 +91,7 @@ app.include_router(users.router)
 app.include_router(dashboard.router)
 app.include_router(aefi.router)
 app.include_router(reports.router)
+app.include_router(dhis2.router)
 app.include_router(admin.router)
 app.include_router(admin.public_router)
 

@@ -17,6 +17,7 @@ import AefiPage from "./pages/AefiPage.jsx";
 import ActivityLogPage from "./pages/ActivityLogPage.jsx";
 import SecuritySettingsPage from "./pages/SecuritySettingsPage.jsx";
 import SystemSettingsPage from "./pages/SystemSettingsPage.jsx";
+import Dhis2Page from "./pages/Dhis2Page.jsx";
 import AssignCaseModal from "./components/AssignCaseModal.jsx";
 import CaseDetailModal from "./components/CaseDetailModal.jsx";
 import Sidebar, { navSections } from "./components/Sidebar.jsx";
@@ -25,7 +26,7 @@ import { Modal, PrimaryButton, SecondaryButton } from "./components/ui.jsx";
 
 // Views where the "Register child" quick-action makes sense
 const REGISTER_BUTTON_VIEWS = ["dashboard", "list", "due", "followup"];
-const ADMIN_VIEWS = ["admin", "activity", "security", "system"];
+const ADMIN_VIEWS = ["admin", "activity", "security", "system", "dhis2"];
 const COLLAPSED_KEY = "idts:sidebar-collapsed";
 const DEFAULT_PROGRAMME = "Expanded Programme on Immunization";
 
@@ -243,6 +244,7 @@ export default function App() {
     activity: "Activity log",
     security: "Security settings",
     system: "System settings",
+    dhis2: "DHIS2 integration",
     account: "Account settings",
     register: "Register a child",
     profile: "Child record",
@@ -355,6 +357,8 @@ export default function App() {
           <SecuritySettingsPage token={token} />
         ) : view === "system" && isAdmin ? (
           <SystemSettingsPage token={token} onProgrammeNameChange={setProgrammeName} />
+        ) : view === "dhis2" && isAdmin ? (
+          <Dhis2Page token={token} />
         ) : view === "account" ? (
           <AccountSettingsPage
             token={token}

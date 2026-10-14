@@ -539,3 +539,61 @@ button.net-status {
     grid-template-columns: 1fr;
   }
 }
+
+/* DHIS2 integration page */
+.dhis2-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.dhis2-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.dhis2-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #D5DEE5;
+  overflow-x: auto;
+}
+.dhis2-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 46px;
+  padding: 0 16px;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  background: none;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: #3E5160;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dhis2-tab svg {
+  color: #10633B;
+}
+.dhis2-tab.active {
+  color: #073F63;
+  border-bottom-color: #0A5A8A;
+}
+.dhis2-tab:hover {
+  color: #073F63;
+}
+@media (max-width: 900px) {
+  .dhis2-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .dhis2-stats {
+    grid-template-columns: 1fr;
+  }
+}
