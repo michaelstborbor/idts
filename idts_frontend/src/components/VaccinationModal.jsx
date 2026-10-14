@@ -41,7 +41,7 @@ export default function VaccinationModal({ token, child, dose, facilities, onSav
         batch_lot_number: batchLot.trim() || null,
         notes: notes.trim() || null,
         idempotency_key: genIdempotencyKey(),
-      });
+      }, { label: `${dose.antigen} dose ${dose.dose_number} for ${child.full_name}` });
       onSaved(record);
     } catch (err) {
       setError(err.message);

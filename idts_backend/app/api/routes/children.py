@@ -15,7 +15,7 @@ from app.core.scope import (
     restrict,
 )
 from app.db.session import get_db
-from app.models.child import Child
+from app.models.child import Child, VaccinationEvent
 from app.models.user import Facility
 from app.models.user import User
 from app.schemas.child import (
@@ -26,9 +26,12 @@ from app.schemas.child import (
     ChildUpdate,
     DoseEvaluationOut,
     DuplicateCandidate,
+    OfflineChild,
+    OfflinePack,
+    OfflineScheduleEntry,
 )
 from app.services import audit
-from app.services.schedule_service import evaluate_child, is_fully_immunized_child
+from app.services.schedule_service import evaluate_child, get_active_schedule_entries, is_fully_immunized_child
 
 router = APIRouter(prefix="/api/v1/children", tags=["children"])
 
@@ -156,8 +159,16 @@ def register_child(
         raise HTTPException(status_code=400, detail="Date of birth cannot be in the future.")
     ensure_facility_in_scope(db, current_user, payload.facility_id)
 
+    # A device resubmitting an offline registration gets the record it
+    # already created instead of a duplicate child.
+    if payload.id is not None:
+        existing = db.get(Child, payload.id)
+        if existing is not None:
+            ensure_child_in_scope(db, current_user, existing)
+            return existing
+
     child = Child(
-        id=uuid.uuid4(),
+        id=payload.id or uuid.uuid4(),
         system_id=_generate_system_id(db),
         full_name=payload.full_name.strip(),
         sex=payload.sex,
@@ -190,6 +201,57 @@ def list_children(
     query = restrict(query, Child.facility_id, resolve_facility_scope(db, current_user, facility_id))
     return query.order_by(Child.created_at.desc()).all()
 
+
+OFFLINE_PACK_LIMIT = 2000
+
+
+@router.get("/offline-pack", response_model=OfflinePack)
+def offline_pack(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Child records (with schedule status and dose history) for everyone in
+    the caller's scope, plus the active schedule, so a device can keep
+    showing profiles and taking entries while it has no connection.
+    Capped at the most recently registered OFFLINE_PACK_LIMIT children.
+    """
+    query = db.query(Child).filter(Child.status == "active", Child.deleted_at.is_(None))
+    query = restrict(query, Child.facility_id, resolve_facility_scope(db, current_user, None))
+    rows = query.order_by(Child.created_at.desc()).limit(OFFLINE_PACK_LIMIT + 1).all()
+    truncated = len(rows) > OFFLINE_PACK_LIMIT
+    rows = rows[:OFFLINE_PACK_LIMIT]
+
+    from app.schemas.defaulter import VaccinationOut  # avoids a schema import cycle
+
+    vaccinations: dict = {}
+    if rows:
+        events = (
+            db.query(VaccinationEvent)
+            .filter(VaccinationEvent.child_id.in_([c.id for c in rows]))
+            .order_by(VaccinationEvent.event_date.desc())
+            .all()
+        )
+        for event in events:
+            vaccinations.setdefault(event.child_id, []).append(
+                VaccinationOut.model_validate(event).model_dump(mode="json")
+            )
+
+    children = []
+    for child in rows:
+        evaluations = evaluate_child(db, child)
+        item = OfflineChild.model_validate(child)
+        item.schedule = [_dose_evaluation_out(e) for e in evaluations]
+        item.fully_immunized = is_fully_immunized_child(db, child, evaluations=evaluations)
+        item.vaccination_history = vaccinations.get(child.id, [])
+        children.append(item)
+
+    return OfflinePack(
+        generated_at=datetime.now(timezone.utc),
+        truncated=truncated,
+        schedule=[OfflineScheduleEntry.model_validate(e) for e in get_active_schedule_entries(db)],
+        children=children,
+    )
 
 @router.get("/{child_id}", response_model=ChildDetailOut)
 def get_child(

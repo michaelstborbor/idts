@@ -72,15 +72,17 @@ export function PrimaryButton({ children, onClick, type = "button", style, disab
   );
 }
 
-export function SecondaryButton({ children, onClick, type = "button", style }) {
+export function SecondaryButton({ children, onClick, type = "button", style, disabled }) {
   return (
     <button
       type={type}
       onClick={onClick}
+      disabled={disabled}
       className="btn-secondary"
       style={{
         minHeight: 44, padding: "10px 20px", borderRadius: 10, fontSize: 16, fontWeight: 600, color: COLORS.primaryDark,
-        backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: "pointer",
+        backgroundColor: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.55 : 1,
         ...style,
       }}
     >

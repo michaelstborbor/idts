@@ -10,8 +10,20 @@
  * web app now, not a Claude artifact sandbox.
  */
 
+import { cacheClearUser, cacheGet, cachePut, cachePutMany } from "../offline/store.js";
+import { applyOverlay, synthesize } from "../offline/overlay.js";
+import { configureSync, enqueue, hasQueuedWork, newId, pendingOpsFor, setSyncUser } from "../offline/sync.js";
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 const TOKEN_KEY = "idts:token";
+const USER_KEY = "idts:user-id";
+const PACK_KEY = "offline:pack-info";
+const SCHEDULE_KEY = "offline:schedule";
+// Lookups that shouldn't pile up on the device.
+const NO_CACHE = [/\/children\/duplicates/, /\/children\/search/, /\/admin\/audit-logs/, /\/aefi\/suggest/];
+
+let sessionUserId = (() => { try { return localStorage.getItem(USER_KEY); } catch { return null; } })();
+let unauthorizedHandler = null;
 
 export function getStoredToken() {
   try {
@@ -30,6 +42,31 @@ export function setStoredToken(token) {
   }
 }
 
+// Remembers who is signed in on this device, so cached data and queued
+// entries belong to the right person, even after a restart while offline.
+export function setSessionUser(id) {
+  sessionUserId = id;
+  try {
+    if (id) localStorage.setItem(USER_KEY, id);
+    else localStorage.removeItem(USER_KEY);
+  } catch { /* session-only */ }
+  setSyncUser(id);
+}
+
+export function getSessionUserId() {
+  return sessionUserId;
+}
+
+export function onUnauthorized(fn) {
+  unauthorizedHandler = fn;
+}
+
+// Sign-out on a shared device: drop this person's cached records. Entries
+// still waiting to sync stay, and go up next time they sign in.
+export async function clearOfflineData(userId) {
+  if (userId) await cacheClearUser(userId);
+}
+
 class ApiError extends Error {
   constructor(message, status, detail) {
     super(message);
@@ -38,14 +75,48 @@ class ApiError extends Error {
   }
 }
 
-async function request(path, { method = "GET", body, token, params, form } = {}) {
-  let url = `${API_BASE_URL}${path}`;
-  if (params) {
-    const qs = new URLSearchParams(
-      Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "")
-    ).toString();
-    if (qs) url += `?${qs}`;
+function withQuery(path, params) {
+  if (!params) return path;
+  const qs = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "")
+  ).toString();
+  return qs ? `${path}${path.includes("?") ? "&" : "?"}${qs}` : path;
+}
+
+// GETs go to the network first and fall back to the copy saved on this
+// device. Either way, entries still waiting to sync are laid on top.
+async function request(path, options = {}) {
+  const { method = "GET", token, params, skipOffline } = options;
+  const fullPath = withQuery(path, params);
+  const userId = sessionUserId;
+  if (method !== "GET" || !token || skipOffline || !userId || NO_CACHE.some((re) => re.test(fullPath))) {
+    return send(fullPath, options);
   }
+  let data;
+  try {
+    data = await send(fullPath, options);
+    cachePut(userId, fullPath, data);
+  } catch (err) {
+    if (err.status !== 0) throw err;
+    const cached = await cacheGet(userId, fullPath);
+    if (cached) {
+      data = cached.data;
+    } else {
+      const schedule = (await cacheGet(userId, SCHEDULE_KEY))?.data;
+      data = synthesize(fullPath, await pendingOpsFor(userId), schedule);
+      if (data === undefined) {
+        throw new ApiError("You're offline and this hasn't been saved on this device yet. Open it once while online to use it offline.", 0, null);
+      }
+    }
+  }
+  const ops = await pendingOpsFor(userId);
+  if (!ops.length) return data;
+  const schedule = (await cacheGet(userId, SCHEDULE_KEY))?.data;
+  return applyOverlay(fullPath, data, ops, schedule);
+}
+
+async function send(fullPath, { method = "GET", body, token, form } = {}) {
+  const url = `${API_BASE_URL}${fullPath}`;
 
   const headers = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -82,6 +153,8 @@ async function request(path, { method = "GET", body, token, params, form } = {})
     }
   }
 
+  if (response.status === 401 && token && unauthorizedHandler) unauthorizedHandler();
+
   if (!response.ok) {
     const detail = (data && data.detail) || response.statusText || "Request failed";
     throw new ApiError(typeof detail === "string" ? detail : JSON.stringify(detail), response.status, detail);
@@ -113,6 +186,28 @@ async function download(path, { token, params, filename }) {
   link.click();
   link.remove();
   URL.revokeObjectURL(link.href);
+}
+
+// Data entry that must keep working offline. If the device is offline, the
+// server can't be reached, or earlier entries are still queued (order
+// matters: a dose for a child registered offline must follow that
+// registration), the entry is queued and an optimistic result returned.
+async function offlineWrite({ token, method, path, body, kind, label, refs, optimistic }) {
+  const queueFirst = !navigator.onLine || hasQueuedWork(sessionUserId);
+  if (!queueFirst || !sessionUserId) {
+    try {
+      return await send(path, { method, body, token });
+    } catch (err) {
+      if (err.status !== 0 || !sessionUserId) throw err;
+    }
+  }
+  await enqueue({ kind, method, path, body, label, refs });
+  return { ...optimistic(), _pending: true };
+}
+
+function todayLocalIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export const api = {
@@ -158,16 +253,33 @@ export const api = {
 
   listChildren: (token, facilityId) => request("/api/v1/children", { token, params: { facility_id: facilityId } }),
   getChild: (token, childId) => request(`/api/v1/children/${childId}`, { token }),
-  registerChild: (token, payload) => request("/api/v1/children", { method: "POST", token, body: payload }),
-  updateChild: (token, childId, payload) =>
-    request(`/api/v1/children/${childId}`, { method: "PATCH", token, body: payload }),
+  registerChild: (token, payload) => {
+    const body = { ...payload, id: payload.id || newId() };
+    return offlineWrite({
+      token, method: "POST", path: "/api/v1/children", body,
+      kind: "register_child", label: `Register ${body.full_name}`, refs: { childId: body.id },
+      optimistic: () => ({ ...body, system_id: "Not synced yet", status: "active", created_at: new Date().toISOString() }),
+    });
+  },
+  updateChild: (token, childId, payload, { label } = {}) =>
+    offlineWrite({
+      token, method: "PATCH", path: `/api/v1/children/${childId}`, body: payload,
+      kind: "update_child", label: label || `Edit ${payload.full_name || "child record"}`, refs: { childId },
+      optimistic: () => ({ id: childId, ...payload }),
+    }),
   deleteChild: (token, childId) => request(`/api/v1/children/${childId}`, { method: "DELETE", token }),
   findDuplicates: (token, fullName, dob) =>
     request("/api/v1/children/duplicates", { token, params: { full_name: fullName, dob } }),
 
   listVaccinations: (token, childId) => request(`/api/v1/children/${childId}/vaccinations`, { token }),
-  recordVaccination: (token, childId, payload) =>
-    request(`/api/v1/children/${childId}/vaccinations`, { method: "POST", token, body: payload }),
+  recordVaccination: (token, childId, payload, { label } = {}) => {
+    const body = { ...payload, idempotency_key: payload.idempotency_key || newId() };
+    return offlineWrite({
+      token, method: "POST", path: `/api/v1/children/${childId}/vaccinations`, body,
+      kind: "record_vaccination", label: label || "Record a dose", refs: { childId },
+      optimistic: () => ({ id: body.idempotency_key, child_id: childId, ...body }),
+    });
+  },
 
   getDueList: (token, { statusFilter, facilityId } = {}) =>
     request("/api/v1/due-list", { token, params: { status_filter: statusFilter, facility_id: facilityId } }),
@@ -175,8 +287,14 @@ export const api = {
   listDefaulterCases: (token, statusFilter) =>
     request("/api/v1/defaulters", { token, params: { status_filter: statusFilter } }),
   assignDefaulter: (token, payload) => request("/api/v1/defaulters/assign", { method: "POST", token, body: payload }),
-  recordTracingAttempt: (token, caseId, payload) =>
-    request(`/api/v1/defaulters/${caseId}/trace`, { method: "POST", token, body: payload }),
+  recordTracingAttempt: (token, caseId, payload, { label } = {}) => {
+    const body = { ...payload, id: payload.id || newId(), attempt_date: payload.attempt_date || todayLocalIso() };
+    return offlineWrite({
+      token, method: "POST", path: `/api/v1/defaulters/${caseId}/trace`, body,
+      kind: "trace", label: label || "Tracing attempt", refs: { caseId },
+      optimistic: () => ({ defaulter_case_id: caseId, ...body }),
+    });
+  },
   closeCase: (token, caseId, closureReason) =>
     request(`/api/v1/defaulters/${caseId}/close`, { method: "POST", token, body: { closure_reason: closureReason } }),
 
@@ -226,6 +344,26 @@ export const api = {
     request("/api/v1/reports/vaccinations-summary", {
       token, params: { start_date: startDate, end_date: endDate, facility_id: facilityId },
     }),
+  // Saves every child record in scope (with dose history) and the schedule
+  // on this device, so profiles open and doses can be recorded offline.
+  refreshOfflinePack: async (token, { maxAgeMs = 15 * 60 * 1000 } = {}) => {
+    const userId = sessionUserId;
+    if (!userId) return null;
+    const info = (await cacheGet(userId, PACK_KEY))?.data;
+    if (info && maxAgeMs && Date.now() - info.savedAt < maxAgeMs) return info;
+    const pack = await send("/api/v1/children/offline-pack", { token });
+    const entries = [[SCHEDULE_KEY, pack.schedule]];
+    pack.children.forEach(({ vaccination_history: history, ...child }) => {
+      entries.push([`/api/v1/children/${child.id}`, child]);
+      entries.push([`/api/v1/children/${child.id}/vaccinations`, history]);
+    });
+    const next = { savedAt: Date.now(), children: pack.children.length, truncated: pack.truncated };
+    entries.push([PACK_KEY, next]);
+    await cachePutMany(userId, entries);
+    return next;
+  },
+  getOfflinePackInfo: async () => (sessionUserId ? (await cacheGet(sessionUserId, PACK_KEY))?.data || null : null),
+
   // Administration
   unlockUser: (token, userId) => request(`/api/v1/users/${userId}/unlock`, { method: "POST", token }),
   getSecuritySettings: (token) => request("/api/v1/admin/settings/security", { token }),
@@ -242,6 +380,8 @@ export const api = {
       token, params, filename: `idts-activity-log-${new Date().toISOString().slice(0, 10)}.csv`,
     }),
 };
+
+configureSync({ send, getToken: getStoredToken });
 
 export { ApiError, API_BASE_URL };
 

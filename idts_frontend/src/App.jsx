@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Menu as MenuIcon, UserPlus, Wifi, WifiOff } from "lucide-react";
-import { api, getStoredToken, setStoredToken } from "./api/client.js";
+import { Menu as MenuIcon, UserPlus } from "lucide-react";
+import { api, clearOfflineData, getStoredToken, onUnauthorized, setSessionUser, setStoredToken } from "./api/client.js";
+import { onSynced } from "./offline/sync.js";
 import { COLORS, CONTENT_MAX_WIDTH, FONT_STACK } from "./constants.js";
 import LoginPage from "./pages/LoginPage.jsx";
 import ChildForm from "./pages/ChildForm.jsx";
@@ -19,6 +20,8 @@ import SystemSettingsPage from "./pages/SystemSettingsPage.jsx";
 import AssignCaseModal from "./components/AssignCaseModal.jsx";
 import CaseDetailModal from "./components/CaseDetailModal.jsx";
 import Sidebar, { navSections } from "./components/Sidebar.jsx";
+import { SyncPanel, SyncPill, useSyncState } from "./components/SyncStatus.jsx";
+import { Modal, PrimaryButton, SecondaryButton } from "./components/ui.jsx";
 
 // Views where the "Register child" quick-action makes sense
 const REGISTER_BUTTON_VIEWS = ["dashboard", "list", "due", "followup"];
@@ -66,6 +69,12 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [programmeName, setProgrammeName] = useState(DEFAULT_PROGRAMME);
   const online = useOnlineStatus();
+  const sync = useSyncState();
+  const [syncPanelOpen, setSyncPanelOpen] = useState(false);
+  const [packInfo, setPackInfo] = useState(null);
+  const [refreshingPack, setRefreshingPack] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   useEffect(() => {
     api.getPublicSettings().then((s) => s?.programme_name && setProgrammeName(s.programme_name)).catch(() => {});
@@ -91,9 +100,15 @@ export default function App() {
       if (!token) { setAuthChecked(true); return; }
       try {
         const me = await api.getMe(token);
+        setSessionUser(me.id);
         setCurrentUser(me);
-      } catch {
-        setStoredToken(null);
+      } catch (err) {
+        // Offline with nothing saved yet: keep the stored session and show
+        // sign-in; only a refused token is thrown away.
+        if (err.status !== 0) {
+          setStoredToken(null);
+          setSessionUser(null);
+        }
         setToken(null);
       } finally {
         setAuthChecked(true);
@@ -105,37 +120,85 @@ export default function App() {
     if (!token) return;
     setDataLoading(true);
     setDataError("");
+    // Each list loads on its own, so one that was never saved on this
+    // device doesn't blank the others while offline.
+    const results = await Promise.allSettled([
+      api.listFacilities(token),
+      api.listChildren(token),
+      api.getDueList(token),
+      api.listDefaulterCases(token),
+      api.listDefaulterCases(token, "closed"),
+      api.getDashboardStats(token),
+    ]);
+    const [facilityList, childList, due, open, closed, dashboardStats] = results.map((r) => (r.status === "fulfilled" ? r.value : null));
+    if (facilityList) setFacilities(facilityList);
+    if (childList) setChildren(childList);
+    if (due) setDueRows(due);
+    if (open) setOpenCases(open);
+    if (closed) setClosedCases(closed);
+    if (dashboardStats) setFullyImmunizedIds(new Set(dashboardStats.fully_immunized_child_ids || []));
+    const failure = results.find((r) => r.status === "rejected" && r.reason?.status !== 0);
+    if (failure) setDataError(failure.reason.message);
+    else if (!childList) setDataError(results.find((r) => r.status === "rejected")?.reason?.message || "");
+    setDataLoading(false);
+  }, [token]);
+
+  const refreshPack = useCallback(async (force = false) => {
+    if (!token || !navigator.onLine) return;
+    setRefreshingPack(true);
     try {
-      const [facilityList, childList, due, open, closed, dashboardStats] = await Promise.all([
-        api.listFacilities(token),
-        api.listChildren(token),
-        api.getDueList(token),
-        api.listDefaulterCases(token),
-        api.listDefaulterCases(token, "closed"),
-        api.getDashboardStats(token),
-      ]);
-      setFacilities(facilityList);
-      setChildren(childList);
-      setDueRows(due);
-      setOpenCases(open);
-      setClosedCases(closed);
-      setFullyImmunizedIds(new Set(dashboardStats.fully_immunized_child_ids || []));
-    } catch (err) {
-      setDataError(err.message);
-    } finally {
-      setDataLoading(false);
+      setPackInfo(await api.refreshOfflinePack(token, { maxAgeMs: force ? 0 : undefined }));
+    } catch { /* keep the previous copy */ } finally {
+      setRefreshingPack(false);
     }
   }, [token]);
+
+  useEffect(() => {
+    if (!token || !currentUser) return undefined;
+    api.getOfflinePackInfo().then(setPackInfo).catch(() => {});
+    refreshPack();
+    // When queued entries reach the server, reload so lists show the
+    // server's own records (real IDTS numbers, recalculated statuses).
+    return onSynced(() => { loadAll(); refreshPack(true); });
+  }, [token, currentUser, loadAll, refreshPack]);
+
+  useEffect(() => {
+    if (online && token && currentUser) { loadAll(); refreshPack(); }
+  }, [online]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    onUnauthorized(() => {
+      // Session expired: back to sign-in, but keep this person's saved
+      // records and queued entries for when they sign in again.
+      setStoredToken(null);
+      setSessionUser(null);
+      setToken(null);
+      setCurrentUser(null);
+      setSessionExpired(true);
+    });
+  }, []);
 
   useEffect(() => { if (token && currentUser) loadAll(); }, [token, currentUser, loadAll]);
 
   function handleLogin(newToken, me) {
+    setSessionUser(me.id);
+    setSessionExpired(false);
     setToken(newToken);
     setCurrentUser(me);
+    api.getMe(newToken).catch(() => {}); // saves the profile for offline restarts
+  }
+
+  function requestLogout() {
+    if (sync && sync.pending + sync.failed > 0) setConfirmLogout(true);
+    else handleLogout();
   }
 
   function handleLogout() {
+    const userId = currentUser?.id;
+    setConfirmLogout(false);
     setStoredToken(null);
+    setSessionUser(null);
+    clearOfflineData(userId);
     setToken(null);
     setCurrentUser(null);
     setView("dashboard");
@@ -159,7 +222,7 @@ export default function App() {
   }
 
   if (!token || !currentUser) {
-    return <LoginPage onLogin={handleLogin} />;
+    return <LoginPage onLogin={handleLogin} notice={sessionExpired ? "Your session has ended. Sign in again to keep working; anything saved on this device will then sync." : ""} />;
   }
 
   const isAdmin = currentUser.role === "system_admin";
@@ -201,7 +264,7 @@ export default function App() {
         currentUser={currentUser}
         programmeName={programmeName}
         onAccount={() => navigate("account")}
-        onLogout={handleLogout}
+        onLogout={requestLogout}
       />
 
       <div className="app-main">
@@ -210,14 +273,7 @@ export default function App() {
           <MenuIcon size={22} />
         </button>
         <h1 className="page-title" style={{ fontSize: 26, fontWeight: 700, color: COLORS.ink, margin: 0, flex: 1, minWidth: 0 }}>{viewTitle}</h1>
-        <span
-          className={`net-status${online ? "" : " offline"}`}
-          role="status"
-          title={online ? "Connected" : "No connection: changes can't be saved until you're back online"}
-        >
-          {online ? <Wifi size={16} /> : <WifiOff size={16} />}
-          <span className="net-status-label">{online ? "Online" : "Offline"}</span>
-        </span>
+        <SyncPill online={online} sync={sync} onOpen={() => setSyncPanelOpen(true)} />
         {showRegisterButton && (
           <button
             onClick={() => navigate("register")}
@@ -231,7 +287,7 @@ export default function App() {
 
       {!online && (
         <p role="alert" className="offline-banner">
-          You're offline. You can keep reading what's on screen, but new records won't save until the connection is back.
+          You're offline. Keep working: new registrations, doses and follow-up are saved on this device and sync when the connection is back.
         </p>
       )}
       {dataError && (
@@ -335,6 +391,32 @@ export default function App() {
           }}
           onClose={() => setAssignTarget(null)}
         />
+      )}
+
+      {syncPanelOpen && (
+        <SyncPanel
+          online={online}
+          sync={sync}
+          packInfo={packInfo}
+          refreshingPack={refreshingPack}
+          onRefreshPack={() => refreshPack(true)}
+          onClose={() => setSyncPanelOpen(false)}
+        />
+      )}
+
+      {confirmLogout && (
+        <Modal title="Sign out with unsynced entries?" onClose={() => setConfirmLogout(false)}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <p style={{ fontSize: 16, margin: 0, lineHeight: 1.55 }}>
+              {sync.pending + sync.failed} {sync.pending + sync.failed === 1 ? "entry hasn't" : "entries haven't"} reached the server yet.
+              They stay on this device and sync the next time you sign in here.
+            </p>
+            <div style={{ display: "flex", gap: 12 }}>
+              <SecondaryButton onClick={() => setConfirmLogout(false)} style={{ flex: 1 }}>Stay signed in</SecondaryButton>
+              <PrimaryButton onClick={handleLogout} style={{ flex: 1 }}>Sign out</PrimaryButton>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {caseModalTarget && resolvedCaseModalCase && (

@@ -174,14 +174,24 @@ def record_tracing_attempt(
     if case is None:
         raise HTTPException(status_code=404, detail="Case not found")
     _ensure_case_in_scope(db, current_user, case)
+    # Resubmitted offline attempt: return the one already stored.
+    if payload.id is not None:
+        existing = db.get(TracingAttempt, payload.id)
+        if existing is not None:
+            if existing.defaulter_case_id != case_id:
+                raise HTTPException(status_code=409, detail="That attempt id belongs to a different case.")
+            return existing
     if case.status == "closed":
         raise HTTPException(status_code=400, detail="Cannot record a tracing attempt on a closed case.")
 
+    if payload.attempt_date is not None and payload.attempt_date > date.today():
+        raise HTTPException(status_code=400, detail="Attempt date cannot be in the future.")
+
     attempt = TracingAttempt(
-        id=uuid.uuid4(),
+        id=payload.id or uuid.uuid4(),
         defaulter_case_id=case_id,
         tracer_id=current_user.id,
-        attempt_date=date.today(),
+        attempt_date=payload.attempt_date or date.today(),
         method=payload.method,
         outcome=payload.outcome,
         next_followup_date=payload.next_followup_date,

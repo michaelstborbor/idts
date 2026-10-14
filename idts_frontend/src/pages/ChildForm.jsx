@@ -173,9 +173,14 @@ export default function ChildForm({ token, currentUser, mode = "create", initial
           return; // show the warning, let the user confirm before creating
         }
       } catch (err) {
-        setError(err.message);
-        setChecking(false);
-        return;
+        // Offline the duplicate search can't run; register anyway; the
+        // server still has the record to compare once it syncs.
+        if (err.status !== 0) {
+          setError(err.message);
+          setChecking(false);
+          return;
+        }
+        setDuplicates([]);
       }
       setChecking(false);
     }

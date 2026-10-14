@@ -12,3 +12,11 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <App />
   </React.StrictMode>
 );
+
+// Offline support for the app itself. Only in production builds: the dev
+// server's hot reload and a service worker get in each other's way.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => { /* app still works online */ });
+  });
+}

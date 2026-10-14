@@ -45,6 +45,10 @@ class DefaulterAssignRequest(BaseModel):
 
 
 class TracingAttemptCreate(BaseModel):
+    # Optional client-generated id and date so an attempt logged offline
+    # keeps the day it happened and isn't duplicated when resubmitted.
+    id: Optional[uuid.UUID] = None
+    attempt_date: Optional[date] = None
     method: str
     outcome: str
     next_followup_date: Optional[date] = None
