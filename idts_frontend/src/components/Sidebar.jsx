@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  Activity, AlertTriangle, BarChart3, ChevronsLeft, ChevronsRight, ClipboardList, LayoutDashboard,
+  Activity, AlertTriangle, ArrowLeftRight, BarChart3, ChevronsLeft, ChevronsRight, ClipboardList, LayoutDashboard,
   LogOut, PhoneCall, ServerCog, ShieldCheck, Syringe, UserCircle2, Users, UsersRound, X,
 } from "lucide-react";
 import { COLORS } from "../constants.js";
@@ -28,6 +28,7 @@ export function navSections({ canSeeReports, isAdmin }) {
             { value: "activity", label: "Activity log", icon: Activity },
             { value: "security", label: "Security settings", icon: ShieldCheck },
             { value: "system", label: "System settings", icon: ServerCog },
+            { value: "dhis2", label: "DHIS2 integration", icon: ArrowLeftRight },
           ],
         }]
       : []),

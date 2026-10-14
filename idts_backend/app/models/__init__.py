@@ -11,3 +11,4 @@ from app.models.child import Child, ImmunizationSchedule, ScheduleEntry, Vaccina
 from app.models.defaulter import DefaulterCase, TracingAttempt, AuditLog  # noqa: F401
 from app.models.aefi import AefiEvent, AefiVaccination  # noqa: F401
 from app.models.settings import SystemSetting  # noqa: F401
+from app.models.dhis2 import Dhis2Export  # noqa: F401

@@ -37,6 +37,7 @@ const ENTITY_LABELS = {
   security_settings: "Security settings",
   system_settings: "System settings",
   audit_log: "Activity log",
+  dhis2: "DHIS2",
 };
 
 // Security-relevant events get a warning tone so they stand out when scanning.
